@@ -34,6 +34,14 @@
       "sha": "4e3f098d328a9659d9074852ef7861b7d3078fee",
       "evidenceRun": "https://github.com/the-static-collective/the-haunted-blender/actions/runs/37500386398",
       "purpose": "Rendered video with admitted source pixels."
+    },
+    {
+      "id": "toaster-lbranch",
+      "repository": "the-static-collective/the-haunted-toaster",
+      "ref": "main",
+      "sha": "3652c2a96b6b287cda316d1c92daadf7c7417eaf",
+      "evidenceRun": "https://github.com/the-static-collective/the-haunted-toaster/actions/runs/37551170007",
+      "purpose": "Native inspectAudio, response witness, and L BRANCH lane bank. Exact-head upstream CI success; VIDMAGE integration tested separately."
     }
   ]
 }
