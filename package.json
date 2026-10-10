@@ -1,0 +1,14 @@
+{
+  "name": "vidmage",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Public VIDMAGE integration workbench, evidence-first genesis",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "verify:donors": "node scripts/check-donors.mjs"
+  }
+}
