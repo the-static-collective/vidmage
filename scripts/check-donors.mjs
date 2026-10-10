@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 export function validateDonorLock(lock) {
   assert.equal(lock?.schema, 'vidmage/donor-lock/v0', 'schema');
@@ -21,7 +22,7 @@ export function validateDonorLock(lock) {
   return lock.donors.length;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   const lock = JSON.parse(readFileSync(new URL('../donors.lock.json', import.meta.url), 'utf8'));
   console.log('Verified donor lock:', validateDonorLock(lock), 'source pins');
 }
