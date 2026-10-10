@@ -1,0 +1,35 @@
+# Local media and sensitive material
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.sqlite
+*.sqlite3
+*.db
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.cache/
+.local/
+private/
+workspace/
+media/
+imports/
+renders/
+exports/
+outputs/
+tmp/
+*.mp4
+*.mov
+*.wav
+*.flac
+*.mp3
+*.CR2
+*.CR3
+.DS_Store
+
+# Synthetic tiny fixtures (when explicitly reviewed) should use a manifest
+# and force-add by exception rather than widening this default.

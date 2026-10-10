@@ -1,0 +1,36 @@
+name: VIDMAGE Blender Source Fixture
+
+on:
+  push:
+    branches:
+      - genesis/blender-first-grand-smash-001
+    paths:
+      - .github/workflows/blender-source-fixture.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acquire-pinned-donor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull pinned public Blender branch
+        run: |
+          git clone --quiet https://github.com/the-static-collective/the-haunted-blender.git source
+          git -C source checkout --detach cf0256a49ac8aa879cf2a044847d248177fcfad9
+          test "$(git -C source rev-parse HEAD)" = "cf0256a49ac8aa879cf2a044847d248177fcfad9"
+          git -C source status --short
+      - name: Archive public source only
+        run: |
+          tar -czf blender-pinned-source.tar.gz --exclude=.git -C source .
+          sha256sum blender-pinned-source.tar.gz | tee archive.sha256
+      - name: Export verified donor source
+        uses: actions/upload-artifact@v4
+        with:
+          name: blender-pinned-source-cf0256a49
+          path: |
+            blender-pinned-source.tar.gz
+            archive.sha256
+          if-no-files-found: error
+          retention-days: 1

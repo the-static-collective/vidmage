@@ -30,6 +30,17 @@ No paid generation, provider upload, public sharing, publication, or voice/liken
 
 ## Development
 
-See the upcoming `docs/` design and evidence packet. Proposed work proceeds on a reviewable branch; no merge or deployment is implied by a passing test or a draft pull request.
+Read the proposed implementation packet:
+
+- [Build plan](docs/BUILD_PLAN.md) — complete movie first, cockpit second, integrations after
+- [Architecture](docs/ARCHITECTURE.md) — Blender first, typed donor adapters
+- [Blender branches](docs/BLENDER_BRANCHES.md) — all 60 refs, not just `main`
+- [Exact-head proof ledger](docs/PROOF_LEDGER.md) — tested source and render evidence
+- [Donor atlas](docs/DONOR_ATLAS.md) — reusable neighboring systems
+- [First-user acceptance](docs/FIRST_USE.md) — one full editable video
+
+The pinned upstream SHA list lives in [donors.lock.json](donors.lock.json). Run `npm test` and `npm run verify:donors` (Node 22+) to validate its structure offline. These tests validate metadata shape, **not** upstream feature behavior or user-level filmmaking.
+
+Proposed work proceeds on a reviewable branch; no merge or deployment is implied by a passing test or a draft pull request.
 
 This repo is the **approved public home**: `the-static-collective/vidmage`.
