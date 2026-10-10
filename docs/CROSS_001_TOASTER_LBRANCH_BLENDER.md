@@ -28,7 +28,7 @@ When lyrics are supplied as plain text but lack verified timestamp alignment, **
 
 - Audio: 184.344 seconds. Native Toaster found **6** sections and **2** available lanes. Native lane-bank hash `2f3c95a0485420cee23531e34c610b0f24cca8dd7ae4b24bd2d67a319cfff3bd`.
 - Used `breath-led` as a test *proposal*, not a human-approved aesthetic decision.
-- Blender Paper Director proposed/rendered **28** shots against a completed 008e source movie; first and last views remain explicit `ESTABLISH` and `RETURN`.
+- Blender Paper Director proposed/rendered **28** shots against the completed 008e source movie from Test 002; that base video depended on a **test-local bounded FFmpeg input-duration repair**, not yet an upstream 008e fix ([Blender issue #69](https://github.com/the-static-collective/the-haunted-blender/issues/69)). First and last views remain explicit `ESTABLISH` and `RETURN`.
 - Actual local output: **184.416667s**, H.264 + inherited music audio, full coverage, SHA-256 `6bbdc937b846535614934d5fec360c932a9e85426935214998156d31306b6147`.
 - The existing source film's flawed ordering and mirrored/awkward text is **not corrected** by reframing. This layer governs view selection, not which image should illustrate a lyric. More visual change than 008f's tiny heuristic improvement, but no measured aesthetic superiority is claimed.
 - Media, complete private manifests, song, still images and render are stored owner-locally only; GitHub holds *result metadata and synthetic regression*, not a public user-media upload.
