@@ -1,0 +1,39 @@
+{
+  "schema": "vidmage/donor-lock/v0",
+  "capturedAt": "2026-10-10",
+  "note": "Pinned upstream experimental branch commits for reproducible investigation, not merged/released VIDMAGE claims.",
+  "donors": [
+    {
+      "id": "blender-composite",
+      "repository": "the-static-collective/the-haunted-blender",
+      "ref": "integration/mangalize-005-presentation-ground",
+      "sha": "cf0256a49ac8aa879cf2a044847d248177fcfad9",
+      "evidenceRun": "https://github.com/the-static-collective/the-haunted-blender/actions/runs/37539379716",
+      "purpose": "Composite current inspected tip; 441 reported passing tests."
+    },
+    {
+      "id": "blender-zero-dollar",
+      "repository": "the-static-collective/the-haunted-blender",
+      "ref": "integration/franken-blender-008e-zero-dollar-film-mill",
+      "sha": "2861515164987354208170a6ea4f707883923387",
+      "evidenceRun": "https://github.com/the-static-collective/the-haunted-blender/actions/runs/37408292137",
+      "purpose": "Real FFmpeg whole-film pipeline; 213 reported tests."
+    },
+    {
+      "id": "blender-cockpit",
+      "repository": "the-static-collective/the-haunted-blender",
+      "ref": "integration/franken-blender-008a-visual-cockpit",
+      "sha": "1233fffb5011a35a16d7997e3f13213d3d4f9e25",
+      "evidenceRun": "https://github.com/the-static-collective/the-haunted-blender/actions/runs/37399333063",
+      "purpose": "Browser film cockpit; 194 reported tests."
+    },
+    {
+      "id": "blender-owned-pixel-film",
+      "repository": "the-static-collective/the-haunted-blender",
+      "ref": "integration/franken-blender-008p-owned-pixel-manga-film",
+      "sha": "4e3f098d328a9659d9074852ef7861b7d3078fee",
+      "evidenceRun": "https://github.com/the-static-collective/the-haunted-blender/actions/runs/37500386398",
+      "purpose": "Rendered video with admitted source pixels."
+    }
+  ]
+}
