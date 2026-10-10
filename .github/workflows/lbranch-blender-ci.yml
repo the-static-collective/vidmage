@@ -32,7 +32,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg
-          python -m pip install Pillow==12.1.1
+          python -m pip install Pillow==12.1.1 'opencv-python-headless>=4.10,<5'
       - name: Verify genuine and untimed Toaster Listener evidence
         env:
           VIDMAGE_TOASTER_ROOT: ${{ github.workspace }}/donor-toaster
@@ -42,4 +42,4 @@ jobs:
           VIDMAGE_TOASTER_ROOT: ${{ github.workspace }}/donor-toaster
           PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/donor-blender
         run: |
-          python -m unittest -v tests/test_lbranch_blender_cross.py
+          python -m unittest -v tests/test_lbranch_blender_cross.py tests/test_scene_card_film.py
