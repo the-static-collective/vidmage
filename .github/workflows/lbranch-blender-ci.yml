@@ -1,0 +1,41 @@
+name: VIDMAGE Toaster L BRANCH x Blender Cross
+on:
+  push:
+    branches: ["experiment/toaster-lbranch-blender-director-001"]
+  pull_request:
+    paths:
+      - "bridge/**"
+      - "tests/test_lbranch_blender_cross.py"
+      - ".github/workflows/lbranch-blender-ci.yml"
+permissions:
+  contents: read
+jobs:
+  native-cross:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Pin independent donor commits
+        run: |
+          git clone --quiet https://github.com/the-static-collective/the-haunted-toaster.git donor-toaster
+          git -C donor-toaster checkout --detach 3652c2a96b6b287cda316d1c92daadf7c7417eaf
+          test "$(git -C donor-toaster rev-parse HEAD)" = 3652c2a96b6b287cda316d1c92daadf7c7417eaf
+          git clone --quiet https://github.com/the-static-collective/the-haunted-blender.git donor-blender
+          git -C donor-blender checkout --detach cf0256a49ac8aa879cf2a044847d248177fcfad9
+          test "$(git -C donor-blender rev-parse HEAD)" = cf0256a49ac8aa879cf2a044847d248177fcfad9
+      - name: Install bounded test dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install Pillow==12.1.1
+      - name: Execute actual native crossing and synthetic H264 proof
+        env:
+          VIDMAGE_TOASTER_ROOT: ${{ github.workspace }}/donor-toaster
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/donor-blender
+        run: |
+          python -m unittest -v tests/test_lbranch_blender_cross.py
