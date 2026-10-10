@@ -1,0 +1,35 @@
+# VIDMAGE
+
+**A creator-first video studio, powered by the Static Collective's existing filmmaking experiments.**
+
+**Status:** Public project home / integration planning. **Not** a deployed video application yet.
+
+## The promise
+
+**BRING → DIRECT → MAKE → FINISH → RETURN**
+
+Bring a song, images, a story, a voice recording, or authorized clips. Get a playable video, choose what stays, revise a scene, and export a finished file. The project remains reopenable. Generated ideas never override human decisions.
+
+VIDMAGE aims to let ordinary creators make film without learning Python, FFmpeg, Git branches, or video-model APIs. The first test user is a nontechnical independent creative producer; usability and accessible workflows take precedence over technical spectacle.
+
+## Where the engine comes from
+
+The primary story/film production donor is [Haunted Blender](https://github.com/the-static-collective/the-haunted-blender), **including its tested, unmerged branches**. Its default branch alone is not an honest inventory of this project. [Playdeck](https://github.com/the-static-collective/playdeck) is a complementary deck/Remotion performance engine; [Haunted Toaster](https://github.com/the-static-collective/the-haunted-toaster) contributes the song-first candidate/render lineage. Other adapters may arrive behind explicit interfaces.
+
+The source repositories retain ownership of their code and contracts. VIDMAGE is an integrating product, not a mass-merge or a claim that every experiment is production-ready.
+
+## First executable target
+
+A person supplies authorized local images/clips and optional audio, receives a **complete playable MP4** from deterministic local rendering, makes **one observable revision** to one section, and exports a second MP4 with attributable receipts. The source files remain unmodified. Synthetic fixtures and repeatable tests are required.
+
+## Public repository boundaries
+
+Only source code, synthetic fixtures, public evidence, and reviewed documentation belong here. Never commit personal media, customer data, private documents, API tokens, provider credentials, downloaded account sessions, EXIF location metadata, or full render corpora.
+
+No paid generation, provider upload, public sharing, publication, or voice/likeness use without explicit user authorization and applicable rights.
+
+## Development
+
+See the upcoming `docs/` design and evidence packet. Proposed work proceeds on a reviewable branch; no merge or deployment is implied by a passing test or a draft pull request.
+
+This repo is the **approved public home**: `the-static-collective/vidmage`.
