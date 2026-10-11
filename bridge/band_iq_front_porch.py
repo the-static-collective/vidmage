@@ -407,7 +407,8 @@ class FrontPorch:
             paper=self.verify_tray()
             plan=read(self.tray/"paper-plan.json")
             original=read(self.tray/"scene-cards.json")
-            receipt,cards=story.author(form,paper,plan,original,self.tray)
+            receipt,cards=story.author(
+                form,paper,plan,original,self.tray,materialize_bits=True)
             self.contact_sheet=None
             self.story_dir.mkdir(parents=True,exist_ok=True,mode=0o700)
             write_exclusive(self.story_cards_path,cards)
@@ -642,6 +643,14 @@ class FrontPorch:
                                 if sealed else [.5,.5],
                         "protectText":sealed["shotAssignments"][i]["protectText"]
                                       if sealed else False,
+                        **({"crossBit":{
+                             "sourceAssetId":sealed["shotAssignments"][i][
+                                 "crossBit"]["grabbedSourceAssetId"],
+                             "crop":sealed["shotAssignments"][i]["crossBit"]["crop"],
+                             "place":sealed["shotAssignments"][i]["crossBit"]["place"],
+                             "opacity":sealed["shotAssignments"][i]["crossBit"]["opacity"],
+                         }} if sealed and "crossBit" in
+                         sealed["shotAssignments"][i] else {}),
                     } for i,row in enumerate(read(self.tray/"paper-plan.json")["shots"])],
                     "images":[{
                         "assetId":aid,
