@@ -33,8 +33,16 @@ class NativePlaydeckTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root=Path(td)
             from PIL import Image
-            Image.new("RGB",(640,360),(32,82,121)).save(root/"a.png")
-            Image.new("RGB",(640,360),(117,63,45)).save(root/"b.png")
+            from PIL import ImageDraw
+            for name,color in (("a.png",(32,82,121)),("b.png",(117,63,45))):
+                canvas=Image.new("RGB",(640,360),color)
+                draw=ImageDraw.Draw(canvas)
+                for j in range(14):
+                    draw.rectangle((j*43+4, j*17%195+6,j*43+28,j*17%195+110),
+                                   fill=((j*29+30)%256,(j*47+75)%256,(j*19+130)%256))
+                draw.ellipse((210,80,460,300),outline=(252,238,225),width=13)
+                draw.line((15,15,620,345),fill=(225,240,250),width=7)
+                canvas.save(root/name)
             audio=root/"song.wav"
             subprocess.run(["ffmpeg","-nostdin","-v","error","-f","lavfi",
                             "-i","sine=frequency=510:duration=4:sample_rate=22050",
