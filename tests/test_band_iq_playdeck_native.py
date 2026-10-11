@@ -302,6 +302,55 @@ class NativePlaydeckTest(unittest.TestCase):
                     root,os.environ["VIDMAGE_BLENDER_ROOT"],root/"bad-question-lab")
             self.assertEqual(next_bench.get_decision(),another)
 
+            # BAND-IQ 007: the author gets an entirely NEW A/C review room
+            # for original A versus observed edited film C. It consumes 004,
+            # 005, 006, real MP4 hashes and records exactly one fresh choice.
+            from bridge import band_iq_ac_review as ac
+            ac_inputs={
+                **next_paths,
+                "revision":revision_path,
+                "observation":lab_path,
+                "ac_record_dir":root/"human-ac-reviews",
+            }
+            ac_room=ac.ACReviewBench(**ac_inputs)
+            ac_context=ac_room.state()
+            self.assertEqual(ac_context["status"],"awaiting-new-human-choice")
+            self.assertEqual(ac_context["question"],another["nextQuestion"])
+            self.assertEqual(ac_context["renderers"]["a"]["sha256"],sourceA)
+            self.assertEqual(ac_context["renderers"]["c"]["sha256"],
+                             revision["newMovieSha256"])
+            self.assertEqual(ac_context["observationSha256"],
+                             lab_result["observationSha256"])
+            self.assertEqual(len(ac_context["measurements"]["windows"]),
+                             len(lab_result["windows"]))
+            self.assertIsNone(ac_context["measurements"]["artisticJudgment"])
+            approved_ac=ac_room.commit({
+                "decision":"CONTINUE_REVISION",
+                "operatorAttestationId":"third-actual-human-native-film-choice",
+                "rationale":"Creator picks C; no technical score decides.",
+                "nextQuestion":"",
+                "acknowledgedLocalOnly":True,
+            })
+            self.assertEqual(approved_ac["chosenFilmSha256"],
+                             revision["newMovieSha256"])
+            self.assertEqual(approved_ac["chosenSide"],"c")
+            self.assertFalse(approved_ac["autoKeep"])
+            self.assertFalse(approved_ac["publicationAuthorized"])
+            self.assertFalse(approved_ac["nextExperimentPerformed"])
+            self.assertEqual(ac.ACReviewBench(**ac_inputs).get_decision(),
+                             approved_ac)
+            self.assertEqual(next_bench.get_decision(),another)
+            self.assertEqual(donors.sha_file(vidmage_movie),sourceA)
+            self.assertEqual(donors.sha_file(remotion_movie),sourceB)
+            with self.assertRaisesRegex(ValueError,"already reviewed"):
+                ac_room.commit({
+                    "decision":"CONTINUE_ORIGINAL",
+                    "operatorAttestationId":"opposite-review-should-refuse",
+                    "rationale":"",
+                    "nextQuestion":"",
+                    "acknowledgedLocalOnly":True,
+                })
+
             # 005 human-facing localhost path: obtain real proposals and
             # separately authorize a second operation over HTTP. The native
             # Playdeck/VidMage evidence remains source-pinned and unchanged.
