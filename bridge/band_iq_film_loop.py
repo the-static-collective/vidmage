@@ -85,6 +85,55 @@ def check_lineage(lineage, actual_bindings):
             "harvestManifestSha256":iq.digest(harvest),
             "materialReceiptSha256":iq.digest(mat)}
 
+def doctor_scene_attribution_plan(paper_plan, cards, asset_root):
+    """Exact scene-card attribution for native 008f, NOT a native 008e plan claim.
+
+    008f accepts the 008e plan *shape*. Its native implementation reads
+    source-hash/time spans and the plan identity. This explicit adapter
+    constructs those spans from the actual VidMage card-to-shot performance.
+    It never claims 008e manufactured the movie.
+    """
+    need(paper_plan.get("schema")=="haunted-blender/paper-director-plan/v1",
+         "native Paper Director plan required")
+    bindings=exact_asset_bindings(cards,asset_root)
+    shots=paper_plan.get("shots") or []
+    need(1<=len(shots)<=256 and
+         len(shots)==len(cards.get("shots") or []),"all scene cards must be addressable")
+    cursor=0.
+    slugs=[]
+    for index,(shot,choice) in enumerate(zip(shots,cards["shots"])):
+        start,end=shot.get("start"),shot.get("end")
+        need(iq.finite(start,0) and iq.finite(end,0) and
+             abs(start-cursor)<.02 and end>start,
+             "source attribution must have contiguous shot windows")
+        need(choice.get("shotId")==shot.get("id") and
+             choice.get("assetId") in bindings,
+             "source attribution lost exact authored shot binding")
+        aid=choice["assetId"]
+        slugs.append({"id":"vidmage-card-%04d"%(index+1),
+                      "index":index+1,"durationSeconds":round(end-start,6),
+                      "sourceAssetId":aid,
+                      "sourceSha256":bindings[aid],
+                      "recipe":"fit"})
+        cursor=end
+    need(abs(cursor-paper_plan.get("durationSeconds",0))<.02,
+         "source attribution duration mismatches film")
+    body={
+        "schema":"haunted-blender/zero-dollar-film-plan/v1",
+        "targetSeconds":round(cursor,6),
+        "slugs":slugs,
+        "vidmageAdapter":{
+            "schema":"vidmage/band-iq-scene-attribution/v1",
+            "nativeBlender008eExecution":False,
+            "sourceClaim":"source-image SHA and editor-chosen time intervals only",
+            "nativePaperPlanSha256":iq.digest(paper_plan),
+            "sceneCardsSha256":iq.digest(cards),
+            "assetSha256":bindings,
+        },
+    }
+    return {**body,"id":"band-iq-scene-plan:"+iq.digest(body)[:24]}
+
+
 def validate_selection(cycle, before, selection, plan, cards, observation,
                        audio, asset_root, base_movie, lineage=None):
     iq.verify_cycle(cycle)
@@ -220,6 +269,9 @@ def compare_selected(cycle,before,after,film_record,film_receipt,
 def cli():
     p=argparse.ArgumentParser(description="BAND-IQ selected film and reviewed trial")
     sub=p.add_subparsers(dest="command",required=True)
+    d=sub.add_parser("doctor-plan")
+    for key in ("paper-plan","cards","asset-root","output"):
+        d.add_argument("--"+key,required=True)
     r=sub.add_parser("render")
     for key in ("cycle","before","selection","plan","cards","observation","audio","asset-root","base-movie","output"):
         r.add_argument("--"+key,required=True)
@@ -229,7 +281,16 @@ def cli():
         c.add_argument("--"+key,required=True)
     c.add_argument("--human-review")
     a=p.parse_args()
-    if a.command=="render":
+    if a.command=="doctor-plan":
+        record=doctor_scene_attribution_plan(read(a.paper_plan),read(a.cards),a.asset_root)
+        target=Path(a.output)
+        need(not target.exists(),"attribution plan output is create-only")
+        target.parent.mkdir(parents=True,exist_ok=True)
+        with target.open("x",encoding="utf8") as output:
+            json.dump(record,output,indent=2,sort_keys=True)
+        print(json.dumps({"output":str(target),"attributionPlanId":record["id"],
+                          "nativeBlender008eExecution":False}))
+    elif a.command=="render":
         _,file=render_selected(read(a.cycle),read(a.before),read(a.selection),
                    read(a.plan),read(a.cards),read(a.observation),a.audio,
                    a.asset_root,a.base_movie,a.output,
