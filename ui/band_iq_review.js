@@ -173,6 +173,7 @@
       $("next-video").src="/media/next";
       text("next-sha","Verified third-film SHA-256 "+result.trial.movieSha256);
       text("next-feedback","Local trial completed. A new human review is still required to KEEP.");
+      $("question-lab").hidden=!context.constraints.nativeQuestionDoctorConfigured;
     } catch (error) {
       text("next-feedback",error.message || "The new trial was refused.");
       $("next-commit").disabled=false;
@@ -263,6 +264,72 @@
     }
   }
 
+  async function inspectQuestionLab() {
+    if (!nextRendered || !context || !context.constraints.nativeQuestionDoctorConfigured) {
+      text("question-lab-status","A performed third film and native source-pinned Doctor are required.");
+      return;
+    }
+    const consent=window.confirm(
+      "Inspect the TWO actual local MP4s with the native Blender Doctor? " +
+      "This read-only analysis samples pixels and records an immutable receipt; " +
+      "it does NOT choose a film, change edits, or publish anything."
+    );
+    if (!consent) return;
+    $("question-lab-inspect").disabled=true;
+    text("question-lab-status","Measuring native Blender windows and real frame pixels…");
+    try {
+      const response=await fetch("/api/next/observe",{
+        method:"POST",cache:"no-store",
+        headers:{"Content-Type":"application/json","X-Review-Token":context.reviewToken},
+        body:JSON.stringify({inspectActualFilms:true}),
+      });
+      const result=await response.json();
+      if (!response.ok || !result.ok || !result.observation) {
+        throw new Error(result.message || "Source verification refused.");
+      }
+      const observed=result.observation;
+      text("lab-human-question",observed.humanQuestionVerbatim);
+      const edit=observed.humanChosenEdit;
+      text("lab-edit",observed.humanChosenOperation+
+        (edit.shotId ? " · "+edit.shotId : "")+
+        (edit.toLensId ? " · "+edit.toLensId : ""));
+      text("lab-overall",(observed.sampling.pixelMAEAcrossSong*100).toFixed(2)+
+        "% mean absolute grayscale pixel difference, not a quality score");
+      $("lab-timeline").replaceChildren();
+      for (const item of observed.windows) {
+        const row=document.createElement("div");
+        row.className="lab-window";
+        const label=document.createElement("div");
+        label.textContent=item.start.toFixed(1)+"–"+item.end.toFixed(1)+"s · "+
+          (item.operatorEditOverlapsThisWindow?"Selected edit overlaps":"Outside selected edit");
+        const rail=document.createElement("progress");
+        rail.className="lab-rail";
+        rail.max=1;
+        rail.value=Math.min(1,item.pixelMeanAbsoluteDifference);
+        rail.setAttribute("aria-label","Measured average pixel difference");
+        const caption=document.createElement("small");
+        caption.textContent=(item.pixelMeanAbsoluteDifference*100).toFixed(2)+
+          "% pixel difference · "+(item.changedFrameFractionAt2PctMAE*100).toFixed(0)+
+          "% sampled frames exceed 2% · non-stillness Δ "+
+          item.nativeDoctor.nonStillnessDelta.toFixed(3);
+        row.append(label,rail,caption);
+        $("lab-timeline").appendChild(row);
+      }
+      $("lab-questions").replaceChildren();
+      for (const candidate of observed.possibleNextQuestions) {
+        const li=document.createElement("li");
+        li.textContent=candidate.question+" (human choice needed; no execution)";
+        $("lab-questions").appendChild(li);
+      }
+      text("lab-sha","Source-verified observation · "+observed.observationSha256);
+      $("question-lab-results").hidden=false;
+      text("question-lab-status","Actual film comparison recorded. No new creative choice made.");
+    } catch(error) {
+      text("question-lab-status",error.message || "Actual media comparison refused.");
+      $("question-lab-inspect").disabled=false;
+    }
+  }
+
   $("play").addEventListener("click", playBoth);
   $("pause").addEventListener("click", pauseBoth);
   $("sync").addEventListener("click", () => {
@@ -276,6 +343,7 @@
   });
   $("review-form").addEventListener("submit", submit);
   $("next-form").addEventListener("submit",submitNext);
+  $("question-lab-inspect").addEventListener("click",inspectQuestionLab);
   $("next-shot").addEventListener("change",refreshReplacement);
   document.querySelectorAll('input[name="next-operation"]').forEach(radio => {
     radio.addEventListener("change",updateNextControls);

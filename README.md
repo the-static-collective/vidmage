@@ -43,6 +43,7 @@ Read the proposed implementation packet:
 - [BAND-IQ 003](docs/BAND_IQ_003.md) — actual source-pinned native Playdeck Remotion renderer and a separately witnessed comparison against VidMage's selected-window movie
 - [BAND-IQ 004](docs/BAND_IQ_004.md) — local two-film review room where a person explicitly selects KEEP A, KEEP B, SCRAPE BOTH or a new experiment question; source films remain immutable
 - [BAND-IQ 005](docs/BAND_IQ_005.md) — the author's verbatim next question becomes three bounded test proposals; a second human authorization can perform one local third film and preserve an editable, reopenable revision
+- [BAND-IQ 006](docs/BAND_IQ_006.md) — native Blender rescans the actual old/revised movies against their proper source cards, independently measures picture differences, and returns human-only next questions without ranking art
 
 The pinned upstream SHA list lives in [donors.lock.json](donors.lock.json). Run `npm test` and `npm run verify:donors` (Node 22+) to validate its structure offline. These tests validate metadata shape, **not** upstream feature behavior or user-level filmmaking.
 

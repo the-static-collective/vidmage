@@ -263,6 +263,45 @@ class NativePlaydeckTest(unittest.TestCase):
             self.assertEqual(human_bench.get_decision(),chosen)
             self.assertEqual(next_bench.get_decision(),another)
 
+            # BAND-IQ 006: *actual* native 008f rescans both real films,
+            # source-bound to each DIFFERENT editor card attribution. Pixel
+            # deltas refer to the authored swap; no artist evaluation follows.
+            from bridge import band_iq_question_lab as question_lab
+            lab_result,lab_path=question_lab.observe(
+                next_bench,revision,plan,cards,obs,audio,root,
+                os.environ["VIDMAGE_BLENDER_ROOT"],root/"question-laboratory")
+            self.assertTrue(Path(lab_path).is_file())
+            self.assertEqual(lab_result["humanQuestionVerbatim"],another["nextQuestion"])
+            self.assertEqual(lab_result["sourceRevisionSha256"],revision["revisionSha256"])
+            self.assertTrue(lab_result["realNativeDoctor"])
+            self.assertFalse(lab_result["native008eExecution"])
+            self.assertEqual(lab_result["nativeDoctorCoverageOriginal"],1)
+            self.assertEqual(lab_result["nativeDoctorCoverageRevision"],1)
+            self.assertEqual(lab_result["humanChosenOperation"],"SWAP_CARD")
+            self.assertEqual(len(lab_result["possibleNextQuestions"]),3)
+            self.assertIsNone(lab_result["artisticJudgment"])
+            self.assertFalse(lab_result["automaticKeep"])
+            self.assertFalse(lab_result["automaticExecution"])
+            self.assertFalse(lab_result["newExperimentAuthorized"])
+            self.assertEqual(lab_result["actualOldFilmSha256"],sourceA)
+            self.assertEqual(lab_result["actualNewFilmSha256"],revision["newMovieSha256"])
+            self.assertTrue(any(w["pixelMeanAbsoluteDifference"]>0.01
+                                for w in lab_result["windows"]))
+            self.assertTrue(any(w["operatorEditOverlapsThisWindow"]
+                                for w in lab_result["windows"]))
+            reopened_lab=question_lab.reopen(
+                lab_path,None,revision,next_bench)
+            self.assertEqual(reopened_lab["observationSha256"],
+                             lab_result["observationSha256"])
+            with self.assertRaisesRegex(ValueError,"evidence identity"):
+                bad_revision=dict(revision,newMovieSha256="0"*64)
+                question_lab.reopen(lab_path,None,bad_revision,next_bench)
+            tampered=dict(revision,humanQuestionVerbatim="model hallucinated artistic question")
+            with self.assertRaisesRegex(ValueError,"evidence identity"):
+                question_lab.observe(next_bench,tampered,plan,cards,obs,audio,
+                    root,os.environ["VIDMAGE_BLENDER_ROOT"],root/"bad-question-lab")
+            self.assertEqual(next_bench.get_decision(),another)
+
             # 005 human-facing localhost path: obtain real proposals and
             # separately authorize a second operation over HTTP. The native
             # Playdeck/VidMage evidence remains source-pinned and unchanged.
@@ -278,6 +317,8 @@ class NativePlaydeckTest(unittest.TestCase):
             next_bench.enable_next_sources(plan=plan_file,cards=cards_file,
                 observation=observation,audio=audio,asset_root=root)
             self.assertTrue(next_bench.state()["constraints"]["nextQuestionToolsConfigured"])
+            next_bench.next_blender_root=os.environ["VIDMAGE_BLENDER_ROOT"]
+            self.assertTrue(next_bench.state()["constraints"]["nativeQuestionDoctorConfigured"])
             with contextlib.redirect_stdout(io.StringIO()):
                 server=review.serve(next_bench,port=0)
             runner=threading.Thread(target=server.serve_forever,daemon=True)
@@ -336,6 +377,34 @@ class NativePlaydeckTest(unittest.TestCase):
                 self.assertEqual(repeated.exception.code,409)
                 self.assertEqual(next_bench.get_decision(),another)
                 self.assertEqual(donors.sha_file(vidmage_movie),sourceA)
+                self.assertEqual(donors.sha_file(remotion_movie),sourceB)
+                # 006 in-room actual measurement is a SECOND explicit POST,
+                # not silently triggered by the render or the question.
+                self.assertIsNone(next_bench.last_observation)
+                analysis=json.dumps({"inspectActualFilms":True}).encode("utf8")
+                unauthorized=Request(baseurl+"/api/next/observe",
+                                     data=analysis,headers={
+                       "Content-Type":"application/json",
+                       "Origin":"https://outside.example",
+                       "X-Review-Token":next_bench.token})
+                with self.assertRaises(HTTPError) as refused:
+                    urlopen(unauthorized)
+                self.assertEqual(refused.exception.code,403)
+                self.assertIsNone(next_bench.last_observation)
+                authorized=Request(baseurl+"/api/next/observe",
+                                   data=analysis,headers={
+                       "Content-Type":"application/json","Origin":baseurl,
+                       "X-Review-Token":next_bench.token})
+                with urlopen(authorized) as response:
+                    self.assertEqual(response.status,200)
+                    observed=json.load(response)["observation"]
+                self.assertEqual(observed["humanChosenOperation"],"CHANGE_LENS")
+                self.assertEqual(observed["sourceReviewSha256"],another["reviewSha256"])
+                self.assertEqual(observed["actualOldFilmSha256"],sourceA)
+                self.assertTrue(observed["realNativeDoctor"])
+                self.assertFalse(observed["automaticKeep"])
+                self.assertIsNone(observed["artisticJudgment"])
+                self.assertEqual(len(observed["possibleNextQuestions"]),3)
                 self.assertEqual(donors.sha_file(remotion_movie),sourceB)
             finally:
                 server.shutdown()

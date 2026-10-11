@@ -128,6 +128,22 @@
       <p>Its source question, single change, original films, and editable scene cards have separate receipts.</p>
       <video id="next-video" controls playsinline preload="metadata" aria-label="Newly rendered author-selected trial film"></video>
       <div id="next-sha" class="hash"></div>
+      <section id="question-lab" class="question-lab" hidden>
+        <div class="eyebrow">BAND-IQ 006 · QUESTION LABORATORY</div>
+        <h3>What actually changed?</h3>
+        <p>Measure both real films independently with Blender's Doctor and inspect sampled picture differences. Numbers describe pixels and source timing, not whether the art improved.</p>
+        <button id="question-lab-inspect" type="button">Inspect actual changed windows</button>
+        <div id="question-lab-status" role="status" aria-live="polite"></div>
+        <div id="question-lab-results" hidden>
+          <p><strong>Your original question:</strong> <span id="lab-human-question"></span></p>
+          <p><strong>Creator-selected edit:</strong> <span id="lab-edit"></span></p>
+          <p><strong>Whole-film pixel difference:</strong> <span id="lab-overall"></span></p>
+          <div id="lab-timeline" class="lab-timeline" aria-label="Actually measured film windows"></div>
+          <h3>Possible questions, not commands</h3>
+          <ul id="lab-questions"></ul>
+          <div class="hash" id="lab-sha"></div>
+        </div>
+      </section>
     </div>
   </section>
   <footer>VIDMAGE / BAND-IQ · Local bench only · View ≠ KEEP · Selection ≠ publication · Quiet ≠ weak</footer>
