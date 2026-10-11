@@ -241,7 +241,7 @@ class PorchNativeTests(unittest.TestCase):
                 "preserveOriginals":True,"publish":False,
                 "allowPaidProviders":False,"allowNetworkUpload":False,
             }
-            with self.assertRaisesRegex(ValueError,"separate sealed human Storytable"):
+            with self.assertRaisesRegex(ValueError,"artist must seal the complete storytable"):
                 project.make({**first_authorization(prepared),"storySha256":"0"*64})
             # The actual native source rows will change BEFORE the first film.
             sealed=project.seal_story(story_form)
