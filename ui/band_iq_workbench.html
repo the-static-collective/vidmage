@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex,nofollow">
+  <title>VidMage · The Living Workbench</title>
+  <link rel="stylesheet" href="/workbench.css">
+  <script src="/workbench.js" defer></script>
+</head>
+<body>
+  <div class="overprint" aria-hidden="true"></div>
+  <main class="bench">
+    <header class="topline">
+      <a class="brand" href="/" aria-label="VidMage workbench home">
+        <span class="brand-symbol" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        <span><strong>vidmage</strong><small>the living workbench</small></span>
+      </a>
+      <div class="local-stamp"><span class="pulse" aria-hidden="true"></span> PRIVATE · LOCAL ONLY</div>
+    </header>
+    <section class="hero">
+      <div class="hero-left">
+        <div class="eyebrow"><span class="star" aria-hidden="true">✣</span> ONE SONG · MANY POSSIBLE FILMS</div>
+        <h1>Make a film.<br><em>Find out what happens.</em></h1>
+        <p class="intro">Bring your material. Watch it become something. Ask the strange question. Try one thing. Decide what stays.</p>
+        <div class="hero-actions">
+          <a href="/room" id="first-door" class="primary action">Enter the listening room <span aria-hidden="true">↗</span></a>
+          <button type="button" id="refresh" class="quiet action"><span aria-hidden="true">↻</span> Check for new work</button>
+        </div>
+        <div id="status" class="status" role="status" aria-live="polite">Reading this project's local receipts…</div>
+      </div>
+      <div class="hero-right" aria-hidden="true">
+        <div class="film-orbit">
+          <div class="reel-outer"><div class="reel-middle"><div class="reel-inner"><span>A</span><span>?</span><span>C</span></div></div></div>
+          <div class="orbit-label orbit-top">the original</div>
+          <div class="orbit-label orbit-bottom">the possible</div>
+          <div class="orbit-index">008 / WORKBENCH</div>
+        </div>
+      </div>
+    </section>
+    <div class="ribbon" aria-label="Workbench philosophy">
+      <span>THE FILM IS REAL</span>
+      <span class="asterisk" aria-hidden="true">✳</span>
+      <span>THE QUESTION IS YOURS</span>
+      <span class="asterisk" aria-hidden="true">✳</span>
+      <span>NOTHING MOVES WITHOUT YOU</span>
+    </div>
+    <section class="journey" aria-labelledby="journey-heading">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">01 — THE JOURNEY</div>
+          <h2 id="journey-heading">Seven doors. One workbench.</h2>
+        </div>
+        <p>They're connected by what actually happened, not by what a machine thinks ought to happen next.</p>
+      </div>
+      <div class="doors" id="doors" aria-live="polite">
+        <div class="doors-placeholder">Looking for the source films and their decisions…</div>
+      </div>
+    </section>
+    <section class="tabletop" aria-labelledby="tabletop-heading">
+      <div class="section-heading tabletop-heading">
+        <div><div class="eyebrow">02 — WHAT GREW FROM THE QUESTION</div><h2 id="tabletop-heading">The experiment drawer.</h2></div>
+        <p>Every revision stays a separate particular. Nothing is overwritten, and the latest isn't automatically the best.</p>
+      </div>
+      <div class="question-tape">
+        <span class="tape-label">THE ORIGINAL QUESTION</span>
+        <blockquote id="question">A human question appears here once one has actually been written.</blockquote>
+      </div>
+      <div id="experiments" class="experiments">
+        <p class="empty">No revisions yet. That is a valid beginning.</p>
+      </div>
+      <div id="bench-message" class="bench-message" role="status" aria-live="polite"></div>
+    </section>
+    <section class="under-the-floor" aria-labelledby="receipt-heading">
+      <details>
+        <summary id="receipt-heading"><span class="technical-icon" aria-hidden="true">⌘</span> Under the floorboards <span class="muted">· custody, not clutter</span></summary>
+        <div class="technical">
+          <p>These identifiers preserve the history. The laboratory can measure what changed in the picture, but only a person can say what it means.</p>
+          <dl>
+            <dt>Private project map</dt><dd id="project-sha">…</dd>
+            <dt>Original VidMage film</dt><dd id="a-sha">…</dd>
+            <dt>Historical Playdeck film</dt><dd id="b-sha">…</dd>
+            <dt>First human review</dt><dd id="first-review-sha">Not yet recorded</dd>
+            <dt>Unusable stored receipts</dt><dd id="ignored-receipts">0</dd>
+          </dl>
+        </div>
+      </details>
+    </section>
+    <footer><span>VIDMAGE / STATIC COLLECTIVE</span><span>VIEW ≠ KEEP · QUESTION ≠ COMMAND · CONTINUE ≠ PUBLISH</span></footer>
+  </main>
+</body>
+</html>

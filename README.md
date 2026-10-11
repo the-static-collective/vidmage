@@ -45,6 +45,7 @@ Read the proposed implementation packet:
 - [BAND-IQ 005](docs/BAND_IQ_005.md) — the author's verbatim next question becomes three bounded test proposals; a second human authorization can perform one local third film and preserve an editable, reopenable revision
 - [BAND-IQ 006](docs/BAND_IQ_006.md) — native Blender rescans the actual old/revised movies against their proper source cards, independently measures picture differences, and returns human-only next questions without ranking art
 - [BAND-IQ 007](docs/BAND_IQ_007.md) — a separate local A/C review room where the creator watches original versus revision and signs an immutable follow-up continuation choice, without rewriting source history
+- [BAND-IQ 008](docs/BAND_IQ_008.md) — a tactile, single-origin owner-local seven-door workbench combining original/revised film rooms, real human questions and restartable source-verified experiment navigation
 
 The pinned upstream SHA list lives in [donors.lock.json](donors.lock.json). Run `npm test` and `npm run verify:donors` (Node 22+) to validate its structure offline. These tests validate metadata shape, **not** upstream feature behavior or user-level filmmaking.
 

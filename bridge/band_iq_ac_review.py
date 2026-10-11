@@ -279,9 +279,9 @@ class ACReviewBench:
             "observationSha256":self.pair["source006ObservationSha256"],
             "renderers":{
                 "a":{"title":"A · Original VidMage",
-                     "url":"/media/a","sha256":self.pair["originalVidmageFilmSha256"]},
+                     "url":"media/a","sha256":self.pair["originalVidmageFilmSha256"]},
                 "c":{"title":"C · Human-revised VidMage",
-                     "url":"/media/c","sha256":self.pair["revisedVidmageFilmSha256"]},
+                     "url":"media/c","sha256":self.pair["revisedVidmageFilmSha256"]},
             },
             "measurements":{
                 "sampling":obs["sampling"],

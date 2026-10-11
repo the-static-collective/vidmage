@@ -105,6 +105,18 @@
       }
       nextSet = result.questions;
       text("next-question-text", "Your question: “" + nextSet.humanQuestionVerbatim + "”");
+      if (result.trial) {
+        // An already performed third film is a persisted result, NOT a
+        // request for a new render when the owner reopens the workspace.
+        nextRendered=true;
+        $("next-form").hidden=true;
+        $("next-result").hidden=false;
+        $("next-video").src="/media/next";
+        text("next-sha","Verified earlier third-film SHA-256 "+result.trial.movieSha256);
+        $("question-lab").hidden=!context.constraints.nativeQuestionDoctorConfigured;
+        text("next-feedback","Prior local experiment reopened. No new render or human choice made.");
+        return;
+      }
       for (const radio of document.querySelectorAll('input[name="next-operation"]')) {
         const proposal = nextSet.proposals.find(p => p.kind === radio.value);
         radio.disabled = !proposal || proposal.status !== "proposal-only";
