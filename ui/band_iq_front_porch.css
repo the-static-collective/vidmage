@@ -88,3 +88,45 @@ footer{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap;paddin
 @media(max-width:800px){.opening{grid-template-columns:1fr;padding:49px 0}.opening-art{height:245px}.orb{width:200px;height:200px;box-shadow:0 0 0 10px #a9c19a24,0 0 0 11px #95b08c55,0 0 0 24px #19291e}.sticker.top{right:5%}.sticker.lower{left:6%}.bring-grid,.paper-content{grid-template-columns:1fr}.paper-right{min-height:190px}.steps .step{padding:14px 8px;font-size:.7rem;gap:6px}.lenses{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:500px){.shell{width:94vw}.opening h1{font-size:3rem}.private{font-size:.57rem}.mast{padding:17px 0}.consent{padding:21px 15px}.step{letter-spacing:0}.lenses{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* BAND-IQ 010: direct, accessible editor for actual song-timed shot occurrences. */
+.storytable{margin:28px 0 24px;border:1px solid #c2bd91;padding:clamp(15px,2vw,24px);background:#1a2b22}
+.storytable>h3{margin:10px 0;color:#f2e3bc}
+.storytable>p{font-size:.9rem;color:#c7d5be;max-width:720px;line-height:1.6}
+.storytable audio{display:block;width:100%;margin:20px 0 14px;accent-color:#d6c497}
+.story-timeline{display:flex;gap:4px;min-height:100px;padding:8px 0;overflow:auto;align-items:stretch}
+.story-shot{display:flex;flex-direction:column;justify-content:space-between;flex-basis:78px;min-width:65px;max-width:270px;border:1px solid #728c73;background:#2c4434;color:#e0e2c9;text-align:left;padding:13px 10px;cursor:pointer;border-radius:2px}
+.story-shot:hover{background:#43634c}
+.story-shot[aria-pressed=true]{background:#576d50;border-color:#e8d49b;box-shadow:inset 0 3px 0 #e8d49b}
+.story-shot .story-mark{font:1.5rem Georgia,serif;color:#eddfb3}
+.story-shot small{font:.7rem ui-monospace,monospace;color:#d7dfcb}
+.story-edit-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:20px;padding:24px 0}
+.story-meta{color:#e9d8a8;font:700 .72rem ui-monospace,monospace;letter-spacing:.12em;margin-bottom:12px}
+.story-frame{height:240px;display:grid;place-items:center;position:relative;overflow:hidden;border:9px solid #334738;background:#13221a}
+.story-frame img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
+.story-crosshair{position:absolute;pointer-events:none;inset:0;display:grid;place-items:center;font:2.2rem Georgia,serif;color:#fff8d5;opacity:.45;text-shadow:1px 1px 8px #152419}
+.story-photo-cell small{display:block;color:#b9c5b8;margin:10px 0;font:.71rem/1.5 ui-monospace,monospace}
+.story-controls{display:grid;gap:10px;align-content:start}
+.story-photos{display:grid;grid-template-columns:repeat(auto-fit,minmax(85px,1fr));gap:8px;max-height:205px;overflow:auto}
+.story-choice{padding:6px;border:1px solid #82947d;background:#213729;color:#e4e2c9;cursor:pointer}
+.story-choice:hover{background:#37513c}
+.story-choice[aria-pressed=true]{border:2px solid #e2cd90;background:#465b42}
+.story-choice img{height:68px;width:100%;object-fit:cover;display:block}
+.story-choice span{font:.66rem ui-monospace,monospace;display:block;padding:6px 0 1px}
+.story-controls>label{font-size:.83rem;line-height:1.5;color:#dde7d5}
+.story-controls output{float:right;font:.78rem ui-monospace,monospace;color:#e9d59d}
+.story-controls input[type=range]{width:100%;accent-color:#e5cd92;cursor:pointer}
+.story-controls input:disabled{cursor:default;opacity:.67}
+.story-protect{padding:12px 0;border-top:1px dashed #687c6b}
+.story-actions{display:flex;gap:10px;flex-wrap:wrap}
+.story-navigate{border:1px solid #9cad99;background:#2c4633;color:#e4e8d1;padding:10px 13px;border-radius:3px;cursor:pointer}
+.story-navigate:disabled{opacity:.5;cursor:default}
+#story-sealing{border-top:1px dashed #aabc9c;padding-top:21px;display:grid;gap:13px}
+#story-sealing>label:not(.tick){font-size:.85rem;font-weight:700}
+#story-sealing label small{color:#b5c6af;font-weight:400}
+.story-sealed{background:#3e5842;padding:18px 20px;border-left:3px solid #e5d09a;color:#eaf0db;font-size:.9rem;line-height:1.6}
+.story-sealed strong{font:1.35rem Georgia,serif;display:block;margin-bottom:6px}
+.story-sealed .mono{display:block;margin-top:10px}
+#camera-step{border-top:1px solid #839782;padding-top:18px}
+#camera-step[hidden],#story-sealing[hidden],#story-sealed[hidden]{display:none!important}
+@media(max-width:800px){.story-edit-grid{grid-template-columns:1fr}.story-frame{height:260px}.story-timeline{min-height:95px}.story-photo-cell{max-width:100%}}
