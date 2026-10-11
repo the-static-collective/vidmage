@@ -26,6 +26,13 @@ jobs:
           python -m unittest -v tests/test_band_iq_next_question.py
           python -m unittest -v tests/test_band_iq_review.py
           python -m compileall -q bridge tests
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check human question UI and offline source boundary
+        run: |
+          node --check ui/band_iq_review.js
+          ! grep -E 'https?://|<script[^>]+src="https?://' ui/band_iq_review.html
   native-question-rerender:
     needs: pure-question-authorization
     runs-on: ubuntu-latest
