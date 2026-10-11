@@ -38,6 +38,7 @@ Read the proposed implementation packet:
 - [Exact-head proof ledger](docs/PROOF_LEDGER.md) — tested source and render evidence
 - [Donor atlas](docs/DONOR_ATLAS.md) — reusable neighboring systems
 - [First-user acceptance](docs/FIRST_USE.md) — one full editable video
+- [BAND-IQ 001](docs/BAND_IQ_001.md) — evidence → six cinematic questions → explicitly selected native experiments → comparison → replayable local memory; quietness is protected
 
 The pinned upstream SHA list lives in [donors.lock.json](donors.lock.json). Run `npm test` and `npm run verify:donors` (Node 22+) to validate its structure offline. These tests validate metadata shape, **not** upstream feature behavior or user-level filmmaking.
 
