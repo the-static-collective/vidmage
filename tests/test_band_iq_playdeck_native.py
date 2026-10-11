@@ -263,6 +263,45 @@ class NativePlaydeckTest(unittest.TestCase):
             self.assertEqual(human_bench.get_decision(),chosen)
             self.assertEqual(next_bench.get_decision(),another)
 
+            # BAND-IQ 006: *actual* native 008f rescans both real films,
+            # source-bound to each DIFFERENT editor card attribution. Pixel
+            # deltas refer to the authored swap; no artist evaluation follows.
+            from bridge import band_iq_question_lab as question_lab
+            lab_result,lab_path=question_lab.observe(
+                next_bench,revision,plan,cards,obs,audio,root,
+                os.environ["VIDMAGE_BLENDER_ROOT"],root/"question-laboratory")
+            self.assertTrue(Path(lab_path).is_file())
+            self.assertEqual(lab_result["humanQuestionVerbatim"],another["nextQuestion"])
+            self.assertEqual(lab_result["sourceRevisionSha256"],revision["revisionSha256"])
+            self.assertTrue(lab_result["realNativeDoctor"])
+            self.assertFalse(lab_result["native008eExecution"])
+            self.assertEqual(lab_result["nativeDoctorCoverageOriginal"],1)
+            self.assertEqual(lab_result["nativeDoctorCoverageRevision"],1)
+            self.assertEqual(lab_result["humanChosenOperation"],"SWAP_CARD")
+            self.assertEqual(len(lab_result["possibleNextQuestions"]),3)
+            self.assertIsNone(lab_result["artisticJudgment"])
+            self.assertFalse(lab_result["automaticKeep"])
+            self.assertFalse(lab_result["automaticExecution"])
+            self.assertFalse(lab_result["newExperimentAuthorized"])
+            self.assertEqual(lab_result["actualOldFilmSha256"],sourceA)
+            self.assertEqual(lab_result["actualNewFilmSha256"],revision["newMovieSha256"])
+            self.assertTrue(any(w["pixelMeanAbsoluteDifference"]>0.01
+                                for w in lab_result["windows"]))
+            self.assertTrue(any(w["operatorEditOverlapsThisWindow"]
+                                for w in lab_result["windows"]))
+            reopened_lab=question_lab.reopen(
+                lab_path,None,revision,next_bench)
+            self.assertEqual(reopened_lab["observationSha256"],
+                             lab_result["observationSha256"])
+            with self.assertRaisesRegex(ValueError,"source film or linked question changed"):
+                bad_revision=dict(revision,newMovieSha256="0"*64)
+                question_lab.reopen(lab_path,None,bad_revision,next_bench)
+            tampered=dict(revision,humanQuestionVerbatim="model hallucinated artistic question")
+            with self.assertRaisesRegex(ValueError,"evidence identity"):
+                question_lab.observe(next_bench,tampered,plan,cards,obs,audio,
+                    root,os.environ["VIDMAGE_BLENDER_ROOT"],root/"bad-question-lab")
+            self.assertEqual(next_bench.get_decision(),another)
+
             # 005 human-facing localhost path: obtain real proposals and
             # separately authorize a second operation over HTTP. The native
             # Playdeck/VidMage evidence remains source-pinned and unchanged.
