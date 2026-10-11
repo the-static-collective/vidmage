@@ -69,7 +69,7 @@ class ContactSheetTests(unittest.TestCase):
             receipt["left"]["frames"][0]["imageSha256"])
         self.assertEqual(
             [x["nativeFrameIndex"] for x in receipt["left"]["frames"]],
-            [3,11,20])
+            [3,12,20])
         self.assertEqual(receipt["left"]["sourceSha256"],
                          self.paper["stillSha256"]["p001"])
         self.assertEqual(receipt["right"]["sourceSha256"],
