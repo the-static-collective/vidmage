@@ -143,6 +143,43 @@ class NativePlaydeckTest(unittest.TestCase):
             self.assertFalse(pair["samePixelOutput"])
             self.assertIsNone(pair["aestheticallyEquivalent"])
 
+            # BAND-IQ 004: reopen the ACTUAL native two-film performance,
+            # submit one attested author decision, and recheck source bytes.
+            from bridge import band_iq_review as review
+            paths={}
+            for name,body in (
+                ("cycle",cycle),
+                ("selection",selection),
+                ("vidmage_record",vidmage_record),
+            ):
+                target=root/(f"review-{name}.json")
+                target.write_text(json.dumps(body))
+                paths[name]=target
+            paths["playdeck_receipt"]=Path(receipt_path)
+            paths["vidmage_movie"]=vidmage_movie
+            paths["playdeck_movie"]=remotion_movie
+            paths["record_dir"]=root/"actual-movie-human-reviews"
+            human_bench=review.ReviewBench(**paths)
+            self.assertEqual(human_bench.state()["status"],"awaiting-human-review")
+            chosen=human_bench.commit({
+                "decision":"KEEP_PLAYDECK",
+                "operatorAttestationId":"synthetic-proof-author-explicitly-chooses-b",
+                "rationale":"Native card staging is the intended test performance.",
+                "nextQuestion":"",
+                "acknowledgedTrialOnly":True,
+            })
+            self.assertEqual(chosen["chosenFilmSha256"],donors.sha_file(remotion_movie))
+            self.assertFalse(chosen["publicationAuthorized"])
+            self.assertEqual(review.ReviewBench(**paths).get_decision(),chosen)
+            with self.assertRaisesRegex(ValueError,"already recorded"):
+                human_bench.commit({
+                    "decision":"SCRAPE_BOTH",
+                    "operatorAttestationId":"synthetic-opposite",
+                    "rationale":"",
+                    "nextQuestion":"",
+                    "acknowledgedTrialOnly":True,
+                })
+
             # Proof of non-interchangeable receipts; no silent same-song or
             # silent selection substitution.
             with self.assertRaisesRegex(ValueError,"source material"):
