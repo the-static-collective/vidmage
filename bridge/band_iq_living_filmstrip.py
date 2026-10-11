@@ -90,8 +90,15 @@ def build(story,plan,cards,observation,audio,asset_root,destination):
     rows=[]
     # All photographs must remain from the exact bytes the artist signed.
     for r in story["shotAssignments"]:
-        need(r["sourceSha256"] in story["sourceOwnedPhotosSha256"].values(),
-             "story references a photo from outside original owned material")
+        if "crossBit" in r:
+            bit=r["crossBit"]
+            need(bit["baseSourceSha256"] in story["sourceOwnedPhotosSha256"].values() and
+                 bit["grabbedSourceSha256"] in story["sourceOwnedPhotosSha256"].values() and
+                 r["sourceSha256"]==bit["composedImageSha256"],
+                 "derived source must preserve both actual owned originals")
+        else:
+            need(r["sourceSha256"] in story["sourceOwnedPhotosSha256"].values(),
+                 "story references a photo from outside original owned material")
     need({key:source["sha256"] for key,source in assets.items()}==
          story["authoredImageBindings"],
          "actual raster source bytes changed since the human story seal")
