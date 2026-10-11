@@ -1,0 +1,19 @@
+/* BAND-IQ 007 extends BAND-IQ 004's established local CSS. */
+.question-banner{padding:24px;margin:24px 0;border-left:3px solid #cbd5ad;background:#26382e;border-radius:0 8px 8px 0}
+.question-banner blockquote{font:italic clamp(1.3rem,3vw,2rem)/1.5 Georgia,ui-serif,serif;margin:12px 0 20px;color:#f0e8d2;overflow-wrap:anywhere}
+.ac-evidence{padding:20px 0}
+.lab-timeline{display:grid;gap:9px;margin:17px 0}
+.ac-window{border-bottom:1px solid #506154;padding:10px 0;display:grid;gap:6px}
+.ac-window-label{color:#e6ebdb;font-size:.83rem}
+.ac-window small{color:#b8c3b3;font:.72rem ui-monospace,monospace}
+.ac-meter{width:100%;max-width:740px;height:10px;appearance:none;accent-color:#b9c39b}
+.ac-meter::-webkit-progress-bar{background:#354c3a;border-radius:4px}
+.ac-meter::-webkit-progress-value{background:#b9c39b;border-radius:4px}
+.ac-meter::-moz-progress-bar{background:#b9c39b;border-radius:4px}
+#ac-choices{border:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 10px}
+#ac-form{display:grid;gap:12px}
+#ac-form>label{font-size:.9rem;font-weight:600}
+#ac-form>label small{font-weight:400;color:#acbbad}
+#ac-form input[type=text],#ac-form textarea{display:block;width:100%;background:#102018;border:1px solid #758d73;border-radius:5px;padding:11px;font:inherit;color:#edf4e8}
+#ac-form [hidden],#sealed[hidden]{display:none!important}
+@media(max-width:780px){#ac-choices{grid-template-columns:1fr}}
