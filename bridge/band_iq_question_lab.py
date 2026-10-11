@@ -101,7 +101,8 @@ def verify_sources(bench,record,plan,cards,observation,audio,asset_root):
          "existing source artwork bytes changed")
     if record["experimentKind"]=="SWAP_CARD":
         row=record["changed"]
-        need(row["toAssetId"] in proposals[0]["eligibleReplacementAssetIdsByShot"][row["shotId"]] and
+        need(revised["assets"]==cards["assets"] and
+             row["toAssetId"] in proposals[0]["eligibleReplacementAssetIdsByShot"][row["shotId"]] and
              actual_old[row["fromAssetId"]]!=actual_old[row["toAssetId"]],
              "unapproved source swap cannot be observed")
     elif record["experimentKind"]=="REFOCUS_CARD":
@@ -116,7 +117,8 @@ def verify_sources(bench,record,plan,cards,observation,audio,asset_root):
         row=record["changed"]
         need(row["fromLensId"]==question["priorCinematic"]["lensId"] and
              row["toLensId"] in proposals[0]["eligibleLensIds"] and
-             row["targetWindowUnchanged"] is True,
+             row["targetWindowUnchanged"] is True and
+             revised==cards,
              "unapproved camera-language mutation")
     need(record["newMediaDifferentFromPriorVidmage"]==
          (record["newMovieSha256"]!=record["originalVidmageMovieSha256"]),
