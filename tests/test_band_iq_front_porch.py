@@ -22,7 +22,7 @@ def song_bytes(root,duration=3):
     subprocess.run(["ffmpeg","-nostdin","-v","error","-f","lavfi",
                     "-i",f"sine=frequency=440:duration={duration}:sample_rate=22050",
                     "-ac","1",str(target)],check=True)
-    return target.read_bytes()
+    return target
 
 def image_bytes(index):
     from PIL import Image,ImageDraw
@@ -100,7 +100,7 @@ class PorchPureTests(unittest.TestCase):
         self.assertEqual(self.porch.verify_intake()[0],receipt)
 
     def test_audio_and_photo_are_real_decodable_local_data(self):
-        data=song_bytes(self.root,2)
+        data=song_bytes(self.root,2).read_bytes()
         with self.assertRaisesRegex(ValueError,"file name"):
             self.porch.upload("audio","../../hello.wav",data)
         with self.assertRaisesRegex(ValueError,"image"):
