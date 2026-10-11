@@ -149,6 +149,17 @@ class BandIQTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"overwrite refused"):
                 iq.write_once(root,cycle,"cycleSha256")
 
+    def test_native_doctor_envelope_can_be_assembled_without_forging_observations(self):
+        report=make_report()
+        envelope={"report":report,"reportSha256":iq.digest(report),
+                  "sourceVideoSha256":report["sourceVideoSha256"]}
+        assembled=iq.assemble_input(envelope,artist_annotations=[annotation("deliberate-stillness")])
+        self.assertEqual(assembled["schema"],iq.INPUT)
+        self.assertTrue(iq.verify_cycle(iq.build_cycle(assembled)))
+        envelope["reportSha256"]="f"*64
+        with self.assertRaisesRegex(ValueError,"envelope changed"):
+            iq.assemble_input(envelope)
+
     def test_missing_or_malformed_windows_refuse(self):
         r=make_report()
         r["windows"][1]["start"]=6
