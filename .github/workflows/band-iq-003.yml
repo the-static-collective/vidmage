@@ -1,0 +1,71 @@
+name: VIDMAGE BAND-IQ 003 Native Playdeck Dual Renderer
+on:
+  push:
+    branches: [experiment/band-iq-003-native-playdeck-witness]
+  pull_request:
+    paths:
+      - "bridge/band_iq_playdeck_native.py"
+      - "bridge/band_iq_film_loop.py"
+      - "bridge/scene_card_film.py"
+      - "tests/test_band_iq_playdeck_native.py"
+      - "docs/BAND_IQ_003.md"
+      - ".github/workflows/band-iq-003.yml"
+permissions:
+  contents: read
+jobs:
+  scoped-window-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Python rendering math for pure grammar tests
+        run: python -m pip install 'numpy>=1.26,<3' 'opencv-python-headless>=4.10,<5'
+      - name: Test exact Playdeck Studio 011 grammar pin and no execution leakage
+        run: |
+          python -m unittest -v tests/test_band_iq_playdeck_native.py
+          python -m unittest -v tests/test_band_iq_film_loop.py
+          python -m compileall -q bridge tests
+  real-native-dual-renderer:
+    needs: scoped-window-proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Clone donors at exact witnessed heads, never rolling main
+        run: |
+          git clone --quiet https://github.com/the-static-collective/the-haunted-blender.git donor-blender
+          git -C donor-blender checkout --detach cf0256a49ac8aa879cf2a044847d248177fcfad9
+          test "$(git -C donor-blender rev-parse HEAD)" = cf0256a49ac8aa879cf2a044847d248177fcfad9
+          git clone --quiet https://github.com/the-static-collective/the-haunted-toaster.git donor-toaster
+          git -C donor-toaster checkout --detach 3652c2a96b6b287cda316d1c92daadf7c7417eaf
+          test "$(git -C donor-toaster rev-parse HEAD)" = 3652c2a96b6b287cda316d1c92daadf7c7417eaf
+          git clone --quiet https://github.com/the-static-collective/playdeck.git donor-playdeck
+          git -C donor-playdeck checkout --detach 012186fd67f4c4ef1c6591fc5e29cb559b5a80d0
+          test "$(git -C donor-playdeck rev-parse HEAD)" = 012186fd67f4c4ef1c6591fc5e29cb559b5a80d0
+      - name: Install owner-local only video and Remotion requirements
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install Pillow==12.1.1 'numpy>=1.26,<3' 'opencv-python-headless>=4.10,<5'
+          npm --prefix donor-playdeck install --no-audit --no-fund
+      - name: Execute two different real movie renderers with exactly one human-selected lens
+        env:
+          VIDMAGE_BLENDER_ROOT: ${{ github.workspace }}/donor-blender
+          VIDMAGE_TOASTER_ROOT: ${{ github.workspace }}/donor-toaster
+          VIDMAGE_PLAYDECK_ROOT: ${{ github.workspace }}/donor-playdeck
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/donor-blender
+        run: |
+          python -m unittest -v tests/test_band_iq_playdeck_native.py
+          python -m unittest -v tests/test_band_iq_film_loop.py tests/test_scene_card_film.py
+      - name: No private user media, render corpora or source uploads
+        run: |
+          test ! -d ./private
+          test ! -d ./media
