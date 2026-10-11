@@ -328,6 +328,23 @@ class WorkbenchHandler(ac.ACHandler):
             return self._json(200,self.workbench.state())
         if route=="/room":
             return self._delegate("first","do_GET","/")
+        if (route=="/api/next/questions" and self.workbench.first.next_sources is None and
+            self.workbench.first.next_result is not None):
+            # The original source editing inputs have not been reattached.
+            # A VERIFIED previous render may be watched, but no new proposal
+            # or execution authority can be inferred from its old receipt.
+            earlier=self.workbench.first.get_decision()
+            saved=nextq.ensure_record(
+                load(self.workbench.first.next_result["revisionRecord"]),
+                nextq.REVISION,"revisionSha256")
+            return self._json(200,{"ok":True,
+                "questions":{
+                    "schema":"vidmage/band-iq-008-display-only-restored-question/v1",
+                    "questionSetSha256":saved["questionSetSha256"],
+                    "humanQuestionVerbatim":earlier["nextQuestion"],
+                    "proposals":[],"executionAllowed":False,
+                },
+                "trial":self.workbench.first.next_result})
         if route in ("/review.js","/review.css","/api/context","/api/next/questions",
                      "/media/a","/media/b","/media/next"):
             return self._delegate("first","do_GET",self.path)
