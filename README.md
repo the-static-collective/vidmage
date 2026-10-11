@@ -39,6 +39,7 @@ Read the proposed implementation packet:
 - [Donor atlas](docs/DONOR_ATLAS.md) — reusable neighboring systems
 - [First-user acceptance](docs/FIRST_USE.md) — one full editable video
 - [BAND-IQ 001](docs/BAND_IQ_001.md) — evidence → six cinematic questions → explicitly selected native experiments → comparison → replayable local memory; quietness is protected
+- [BAND-IQ 002](docs/BAND_IQ_002.md) — human-selected proposal becomes a real trial movie with native Blender parts/material custody, actual Toaster audio, and independent before/after Doctor scans
 
 The pinned upstream SHA list lives in [donors.lock.json](donors.lock.json). Run `npm test` and `npm run verify:donors` (Node 22+) to validate its structure offline. These tests validate metadata shape, **not** upstream feature behavior or user-level filmmaking.
 
