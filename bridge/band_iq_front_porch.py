@@ -28,6 +28,7 @@ from . import band_iq_workbench as workbench
 from . import scene_card_film as film
 from . import band_iq_storytable as story
 from . import band_iq_living_filmstrip as strip
+from . import band_iq_contact_sheet as contact
 
 PORCH="vidmage/band-iq-009-owned-intake/v1"
 PREPARED="vidmage/band-iq-009-paper-tray/v1"
@@ -151,6 +152,9 @@ class FrontPorch:
         self.films=self.root/"first-films"
         self.records=self.root/"human-reviews"
         self.token=secrets.token_urlsafe(32)
+        # A/B source candidate pixels exist only in this process, never as
+        # an immutable story receipt or owner-media file.
+        self.contact_sheet=None
         self.lock=threading.RLock()
         self.blender_root=Path(blender_root).expanduser().resolve()
         self.toaster_root=Path(toaster_root).expanduser().resolve()
@@ -371,6 +375,31 @@ class FrontPorch:
         film.validate(plan,cards,observation,self.tray)
         return p
 
+    def compare_candidates(self,form):
+        with self.lock:
+            need(not self.story_path.exists() and not self.profile_path.exists(),
+                 "contact sheet is only for an unsealed human Storytable")
+            paper=self.verify_tray()
+            plan=read(self.tray/"paper-plan.json")
+            provisional=read(self.tray/"scene-cards.json")
+            observation=read(self.tray/"toaster-observation.json")
+            receipt,frames=contact.comparison(
+                form,paper,plan,provisional,observation,
+                self.tray/"song.wav",self.tray)
+            # Every new look replaces only the previous session preview.
+            # It never saves frames to disk or revises existing scene cards.
+            self.contact_sheet=(receipt,frames)
+            return receipt
+
+    def contact_frame(self,sha,side,frame):
+        with self.lock:
+            need(not self.story_path.exists() and not self.profile_path.exists() and
+                 self.contact_sheet is not None,
+                 "no active pre-seal candidate frame")
+            self.verify_tray()
+            receipt,images=self.contact_sheet
+            return contact.verified_image(receipt,images,sha,side,frame)
+
     def seal_story(self,form):
         with self.lock:
             need(not self.story_path.exists() and not self.profile_path.exists(),
@@ -379,6 +408,7 @@ class FrontPorch:
             plan=read(self.tray/"paper-plan.json")
             original=read(self.tray/"scene-cards.json")
             receipt,cards=story.author(form,paper,plan,original,self.tray)
+            self.contact_sheet=None
             self.story_dir.mkdir(parents=True,exist_ok=True,mode=0o700)
             write_exclusive(self.story_cards_path,cards)
             write_exclusive(self.story_path,receipt)
@@ -742,6 +772,18 @@ class PorchHandler(workbench.WorkbenchHandler):
             except (ValueError,OSError,KeyError,TypeError):
                 self._error(404,"verified preview still not found")
             return
+        if route.startswith("/api/porch/contact/frame/"):
+            try:
+                tail=route.removeprefix("/api/porch/contact/frame/")
+                need(re.fullmatch(r"[0-9a-f]{64}/(?:left|right)/[0-2]",tail),
+                     "only current fixed numbered source comparison frames exist")
+                digest,side,index=tail.split("/")
+                data=self.porch.contact_frame(digest,side,int(index))
+                self._headers(200,"image/jpeg",len(data))
+                if self.command!="HEAD":self.wfile.write(data)
+            except (OSError,ValueError,KeyError,TypeError,IndexError):
+                self._error(404,"contact frame unavailable or superseded")
+            return
         if route=="/api/porch/state":
             try:return self._json(200,self.porch.state())
             except (OSError,ValueError,KeyError,TypeError):
@@ -776,7 +818,8 @@ class PorchHandler(workbench.WorkbenchHandler):
         route=urlsplit(self.path).path
         if route not in ("/api/porch/upload","/api/porch/consent",
                          "/api/porch/prepare","/api/porch/story/seal",
-                         "/api/porch/filmstrip/make","/api/porch/make"):
+                         "/api/porch/filmstrip/make","/api/porch/contact/compare",
+                         "/api/porch/make"):
             if self.porch.workbench is None:
                 return self._error(404,"no other action before the first films")
             self.workbench=self.porch.workbench
@@ -815,6 +858,8 @@ class PorchHandler(workbench.WorkbenchHandler):
                     outcome=self.porch.seal_story(form)
                 elif route=="/api/porch/filmstrip/make":
                     outcome=self.porch.preview_filmstrip(form)
+                elif route=="/api/porch/contact/compare":
+                    outcome=self.porch.compare_candidates(form)
                 else:outcome=self.porch.make(form)
             return self._json(201,{"ok":True,"receipt":outcome,"state":self.porch.state()})
         except (OSError,ValueError,KeyError,TypeError,subprocess.CalledProcessError,
