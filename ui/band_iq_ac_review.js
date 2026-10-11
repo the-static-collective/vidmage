@@ -46,7 +46,7 @@
     message("pair-sha",context.pairSha256);
   }
   async function load(){
-    const response=await fetch("/api/context",{cache:"no-store"});
+    const response=await fetch("api/context",{cache:"no-store"});
     if(!response.ok)throw new Error("The local A/C source films could not be verified.");
     const data=await response.json();
     if(data.schema!=="vidmage/band-iq-007-local-review-ui/v1")
@@ -96,7 +96,7 @@
     $("submit").disabled=true;
     message("feedback","Verifying the original film, revision, question and measurement receipts…");
     try{
-      const response=await fetch("/api/decision",{
+      const response=await fetch("api/decision",{
         method:"POST",cache:"no-store",
         headers:{"Content-Type":"application/json","X-Review-Token":context.reviewToken},
         body:JSON.stringify(data),
@@ -109,7 +109,7 @@
     }catch(error){
       message("feedback",error.message||"A/C review refused.");
       try{
-        const response=await fetch("/api/context",{cache:"no-store"});
+        const response=await fetch("api/context",{cache:"no-store"});
         if(response.ok){const newer=await response.json();if(newer.decision)finish(newer.decision);}
       }catch{}
       $("submit").disabled=sealed;
