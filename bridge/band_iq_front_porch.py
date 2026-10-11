@@ -622,6 +622,50 @@ class PorchHandler(workbench.WorkbenchHandler):
             return self._files("/porch")
         if route in ("/porch","/porch.js","/porch.css"):
             return self._files(route)
+        if route=="/api/porch/story/audio":
+            try:
+                prepared=self.porch.verify_tray()
+                file=self.porch.tray/"song.wav"
+                need(donors.sha_file(file)==prepared["audioSha256"],
+                     "song bytes changed since the native paper arrangement")
+                length=file.stat().st_size
+                need(0<length<=AUDIO_BYTES,"bounded working audio unavailable")
+                header=self.headers.get("Range")
+                if header:
+                    found=re.fullmatch(r"bytes=(\\d*)-(\\d*)",header)
+                    need(found and (found.group(1) or found.group(2)),
+                         "invalid audio range")
+                    left,right=found.groups()
+                    if left:
+                        start=int(left)
+                        end=min(int(right),length-1) if right else length-1
+                    else:
+                        start=max(0,length-int(right))
+                        end=length-1
+                    need(start<length and end>=start,"unsatisfiable audio range")
+                    extras={"Accept-Ranges":"bytes",
+                            "Content-Range":f"bytes {start}-{end}/{length}"}
+                    code=206
+                else:
+                    start,end=0,length-1
+                    extras={"Accept-Ranges":"bytes"};code=200
+                self._headers(code,"audio/wav",end-start+1,extras)
+                if self.command=="HEAD":return
+                with file.open("rb") as src:
+                    src.seek(start)
+                    remaining=end-start+1
+                    while remaining:
+                        part=src.read(min(1024*1024,remaining))
+                        if not part:break
+                        self.wfile.write(part)
+                        remaining-=len(part)
+            except (OSError,ValueError,KeyError,TypeError):
+                if not self.wfile.closed:
+                    try:self.connection.close()
+                    except OSError:pass
+            except (BrokenPipeError,ConnectionResetError):
+                pass
+            return
         if route=="/api/porch/state":
             try:return self._json(200,self.porch.state())
             except (OSError,ValueError,KeyError,TypeError):
