@@ -293,7 +293,7 @@ class NativePlaydeckTest(unittest.TestCase):
                 lab_path,None,revision,next_bench)
             self.assertEqual(reopened_lab["observationSha256"],
                              lab_result["observationSha256"])
-            with self.assertRaisesRegex(ValueError,"source film or linked question changed"):
+            with self.assertRaisesRegex(ValueError,"evidence identity"):
                 bad_revision=dict(revision,newMovieSha256="0"*64)
                 question_lab.reopen(lab_path,None,bad_revision,next_bench)
             tampered=dict(revision,humanQuestionVerbatim="model hallucinated artistic question")
