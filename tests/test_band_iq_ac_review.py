@@ -217,6 +217,26 @@ class ACRoomTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"tampered"):
             ac.ACReviewBench(**self.params)
 
+    def test_rehashed_review_claim_cannot_override_prior_receipt(self):
+        saved=self.room.commit(choice("CONTINUE_REVISION"))
+        forged=dict(saved,source006ObservationSha256="0"*64)
+        forged["reviewSha256"]=iq.digest({
+            key:value for key,value in forged.items() if key!="reviewSha256"
+        })
+        self.room.decision_path.write_text(json.dumps(forged))
+        with self.assertRaisesRegex(ValueError,"cannot cross prior evidence"):
+            self.room.get_decision()
+
+    def test_rehashed_unapproved_next_question_refused(self):
+        saved=self.room.commit(choice("CONTINUE_ORIGINAL"))
+        forged=dict(saved,newHumanQuestion="secretly launch a render")
+        forged["reviewSha256"]=iq.digest({
+            key:value for key,value in forged.items() if key!="reviewSha256"
+        })
+        self.room.decision_path.write_text(json.dumps(forged))
+        with self.assertRaisesRegex(ValueError,"unapproved follow-up question"):
+            self.room.get_decision()
+
     def test_new_movie_tamper_refused_on_review(self):
         self.room.videos["c"].write_bytes(self.room.videos["c"].read_bytes()+b"forgery")
         with self.assertRaisesRegex(ValueError,"video changed"):
