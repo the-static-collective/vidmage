@@ -263,6 +263,85 @@ class NativePlaydeckTest(unittest.TestCase):
             self.assertEqual(human_bench.get_decision(),chosen)
             self.assertEqual(next_bench.get_decision(),another)
 
+            # 005 human-facing localhost path: obtain real proposals and
+            # separately authorize a second operation over HTTP. The native
+            # Playdeck/VidMage evidence remains source-pinned and unchanged.
+            import contextlib
+            import io
+            import threading
+            from urllib.request import Request,urlopen
+            from urllib.error import HTTPError
+            plan_file=root/"next-operator-plan.json"
+            cards_file=root/"next-operator-cards.json"
+            plan_file.write_text(json.dumps(plan))
+            cards_file.write_text(json.dumps(cards))
+            next_bench.enable_next_sources(plan=plan_file,cards=cards_file,
+                observation=observation,audio=audio,asset_root=root)
+            self.assertTrue(next_bench.state()["constraints"]["nextQuestionToolsConfigured"])
+            with contextlib.redirect_stdout(io.StringIO()):
+                server=review.serve(next_bench,port=0)
+            runner=threading.Thread(target=server.serve_forever,daemon=True)
+            runner.start()
+            try:
+                baseurl=f"http://127.0.0.1:{server.server_port}"
+                with urlopen(baseurl+"/api/next/questions") as response:
+                    next_page=json.load(response)
+                self.assertTrue(next_page["ok"])
+                self.assertEqual(next_page["questions"]["humanQuestionVerbatim"],
+                                 another["nextQuestion"])
+                lens=next(p for p in next_page["questions"]["proposals"]
+                          if p["kind"]=="CHANGE_LENS")
+                lens_authorization={
+                    "schema":nxt.AUTH,
+                    "questionSetSha256":next_page["questions"]["questionSetSha256"],
+                    "proposalSha256":lens["proposalSha256"],
+                    "operatorAttestationId":"author-explicit-second-http-trial",
+                    "decision":"RENDER_ONE_LOCAL_TRIAL",
+                    "shotId":None,
+                    "replacementAssetId":None,
+                    "newFocus":None,
+                    "newLensId":lens["eligibleLensIds"][0],
+                    "allowLocalExecution":True,
+                    "allowPaidProviders":False,
+                    "allowNetworkUpload":False,
+                }
+                body=json.dumps({"authorization":lens_authorization}).encode("utf8")
+                bad=Request(baseurl+"/api/next/execute",data=body,headers={
+                    "Content-Type":"application/json",
+                    "Origin":"https://malicious.example",
+                    "X-Review-Token":next_bench.token,
+                })
+                with self.assertRaises(HTTPError) as denied:
+                    urlopen(bad)
+                self.assertEqual(denied.exception.code,403)
+                self.assertIsNone(next_bench.next_result)
+                good=Request(baseurl+"/api/next/execute",data=body,headers={
+                    "Content-Type":"application/json",
+                    "Origin":baseurl,
+                    "X-Review-Token":next_bench.token,
+                })
+                with urlopen(good) as response:
+                    self.assertEqual(response.status,201)
+                    trial=json.load(response)["trial"]
+                self.assertTrue(Path(trial["film"]).is_file())
+                opened=nxt.reopen_revision(trial["revisionRecord"])
+                self.assertEqual(opened["movieSha256"],trial["movieSha256"])
+                with urlopen(Request(baseurl+"/media/next",
+                                     headers={"Range":"bytes=0-63"})) as response:
+                    self.assertEqual(response.status,206)
+                    self.assertEqual(response.read(),
+                                     Path(trial["film"]).read_bytes()[:64])
+                with self.assertRaises(HTTPError) as repeated:
+                    urlopen(good)
+                self.assertEqual(repeated.exception.code,409)
+                self.assertEqual(next_bench.get_decision(),another)
+                self.assertEqual(donors.sha_file(vidmage_movie),sourceA)
+                self.assertEqual(donors.sha_file(remotion_movie),sourceB)
+            finally:
+                server.shutdown()
+                server.server_close()
+                runner.join(timeout=3)
+
             # Proof of non-interchangeable receipts; no silent same-song or
             # silent selection substitution.
             with self.assertRaisesRegex(ValueError,"source material"):
