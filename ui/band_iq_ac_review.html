@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex,nofollow">
+<title>BAND-IQ 007 · Original & Revision</title>
+<link rel="stylesheet" href="/review.css">
+<link rel="stylesheet" href="/ac-review.css">
+<script src="/ac-review.js" defer></script>
+</head>
+<body>
+<main>
+<header class="mast">
+  <div class="eyebrow">VIDMAGE · BAND-IQ 007 · OWNER-LOCAL A/C REVIEW</div>
+  <h1>The question has two answers.</h1>
+  <p>One original film. One revised film made after a human-chosen experiment. Compare the performances and decide what deserves further local work. Nothing here publishes or erases either movie.</p>
+  <div class="metadata"><span id="status" role="status" aria-live="polite">Checking source films…</span><span id="operation"></span></div>
+</header>
+<section class="question-banner" aria-label="Original human question">
+  <div class="eyebrow">THE AUTHOR'S ORIGINAL QUESTION · UNMODIFIED</div>
+  <blockquote id="question">Verifying author's source receipt…</blockquote>
+  <div class="hash">Original 004 review · <span id="original-review-sha"></span></div>
+</section>
+<section class="review-grid" aria-label="Original film and revised film">
+  <article class="screen">
+    <div class="screen-top"><span class="chip">A · ORIGINAL</span><span>Reviewed VidMage film</span></div>
+    <video id="a" controls playsinline preload="metadata" aria-label="Original VidMage film"></video>
+    <div class="screen-bottom"><span id="sha-a" class="hash"></span><span>Original remains intact</span></div>
+  </article>
+  <article class="screen">
+    <div class="screen-top"><span class="chip">C · REVISION</span><span>One human-chosen experiment</span></div>
+    <video id="c" controls playsinline preload="metadata" muted aria-label="Human revised VidMage film"></video>
+    <div class="screen-bottom"><span id="sha-c" class="hash"></span><span>New film, not yet selected</span></div>
+  </article>
+</section>
+<section class="transport" aria-label="Paired video controls">
+  <div class="transport-left">
+    <button type="button" id="play">Play both</button>
+    <button type="button" id="pause">Pause both</button>
+    <button type="button" id="sync">Synchronize to A</button>
+  </div>
+  <fieldset class="audio-select">
+    <legend>Hear soundtrack from</legend>
+    <label><input type="radio" name="sound" value="a" checked> Original</label>
+    <label><input type="radio" name="sound" value="c"> Revision</label>
+  </fieldset>
+</section>
+<section class="evidence ac-evidence">
+  <details>
+    <summary>Show measured changes · not a quality score</summary>
+    <p>Actual full-song native Doctor scans and independently sampled picture differences from BAND-IQ 006. A large difference is not necessarily a better film. Stillness is not treated as a flaw.</p>
+    <p id="whole-difference"></p>
+    <div class="lab-timeline" id="timeline" aria-label="Measured original versus revised pixel differences"></div>
+    <dl>
+      <dt>Observation receipt</dt><dd id="observation-sha"></dd>
+      <dt>Revision receipt</dt><dd id="revision-sha"></dd>
+      <dt>A/C pair identity</dt><dd id="pair-sha"></dd>
+    </dl>
+  </details>
+</section>
+<section class="decision">
+  <div class="eyebrow">NEW REVIEW · INDEPENDENT FROM THE FIRST</div>
+  <h2>Which performance continues?</h2>
+  <p>Keep the original direction, continue with the revision, decline both candidates, or ask a new question. This is a decision about local continuation only—not public release, export, or a new render.</p>
+  <form id="ac-form">
+    <fieldset id="ac-choices">
+      <legend>Choose exactly one result</legend>
+      <label class="choice"><input type="radio" name="decision" value="CONTINUE_ORIGINAL" required><span><strong>CONTINUE A</strong><small>Carry forward the original film</small></span></label>
+      <label class="choice"><input type="radio" name="decision" value="CONTINUE_REVISION"><span><strong>CONTINUE C</strong><small>Carry forward the revised film</small></span></label>
+      <label class="choice"><input type="radio" name="decision" value="DECLINE_BOTH"><span><strong>DECLINE BOTH</strong><small>Preserve both films and their evidence</small></span></label>
+      <label class="choice"><input type="radio" name="decision" value="ASK_ANOTHER_QUESTION"><span><strong>ASK ANOTHER QUESTION</strong><small>Write it down; do not start another edit</small></span></label>
+    </fieldset>
+    <label id="new-question-label" for="new-question" hidden>Your new creative question</label>
+    <textarea id="new-question" maxlength="1200" rows="2" hidden placeholder="What would you like to explore next?"></textarea>
+    <label for="why">What did you see or feel? <small>Optional; your own words</small></label>
+    <textarea id="why" maxlength="2000" rows="3" placeholder="Perhaps the untouched passage says more."></textarea>
+    <label for="creator">New human review attestation <small>Required; name or local review ID</small></label>
+    <input type="text" id="creator" maxlength="256" autocomplete="off" required placeholder="Who is making this decision?">
+    <label class="acknowledge"><input type="checkbox" id="acknowledge" required><span>I understand this records one durable A/C choice without editing, erasing, exporting or publishing either film, and without starting another experiment.</span></label>
+    <button type="submit" class="commit" id="submit">Seal my A/C decision</button>
+  </form>
+  <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
+  <section id="sealed" class="sealed" hidden aria-label="Completed review decision">
+    <div class="eyebrow">HUMAN CHOICE SEALED · READ-ONLY</div>
+    <h3 id="sealed-choice"></h3>
+    <p>The previous author question, original MP4, revised MP4 and native observation remain separate and intact.</p>
+    <p class="hash" id="sealed-sha"></p>
+  </section>
+</section>
+<footer>BAND-IQ 007 · A/C CHOICE ≠ PUBLICATION · OBSERVATION ≠ TASTE · REVISION ≠ ERASURE</footer>
+</main>
+</body>
+</html>
