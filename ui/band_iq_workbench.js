@@ -91,8 +91,8 @@
         action.textContent="Open original ↔ revision";
         action.addEventListener("click",()=>selectPair(item,card));
       }else{
-        action.textContent="Open original review";
-        action.addEventListener("click",()=>{window.location.assign("/room");});
+        action.textContent="Resume this local trial";
+        action.addEventListener("click",()=>resumeTrial(item,card));
       }
       card.append(marker,heading,q,details,action);
       $("experiments").appendChild(card);
@@ -141,6 +141,27 @@
       busy=false;$("refresh").disabled=false;
     }
   }
+  async function resumeTrial(item,card){
+    if(busy||!context)return;
+    busy=true;card.setAttribute("aria-busy","true");
+    text("bench-message","Reopening this exact earlier trial; no new film will be rendered…");
+    try{
+      const response=await fetch("/api/workbench/restore",{
+        method:"POST",cache:"no-store",
+        headers:{"Content-Type":"application/json",
+                 "X-Workbench-Token":context.token},
+        body:JSON.stringify({revisionSha256:item.revisionSha256}),
+      });
+      const result=await response.json();
+      if(!response.ok||!result.ok||!result.trial){
+        throw new Error(result.message||"The original project evidence is no longer available.");
+      }
+      window.location.assign("/room");
+    }catch(error){
+      text("bench-message",error.message||"The prior revision could not be reopened.");
+    }finally{busy=false;card.removeAttribute("aria-busy");}
+  }
+
   async function selectPair(item,card){
     if(busy||!context||!item.observationSha256)return;
     busy=true;card.setAttribute("aria-busy","true");
