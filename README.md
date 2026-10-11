@@ -47,6 +47,7 @@ Read the proposed implementation packet:
 - [BAND-IQ 007](docs/BAND_IQ_007.md) — a separate local A/C review room where the creator watches original versus revision and signs an immutable follow-up continuation choice, without rewriting source history
 - [BAND-IQ 008](docs/BAND_IQ_008.md) — a tactile, single-origin owner-local seven-door workbench combining original/revised film rooms, real human questions and restartable source-verified experiment navigation
 - [BAND-IQ 009](docs/BAND_IQ_009.md) — the creator-facing first song and owned-images porch, with explicit local permissions, native Toaster/Blender preparation, independently approved actual VidMage/Playdeck A/B renders and automatic handoff to the living workbench
+- [BAND-IQ 010](docs/BAND_IQ_010.md) — the human Storytable: hear the actual song, assign owned photos to each native shot, choose per-occurrence framing/text protection, then seal the exact source before the first A/B films
 
 The pinned upstream SHA list lives in [donors.lock.json](donors.lock.json). Run `npm test` and `npm run verify:donors` (Node 22+) to validate its structure offline. These tests validate metadata shape, **not** upstream feature behavior or user-level filmmaking.
 
