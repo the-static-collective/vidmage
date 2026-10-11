@@ -243,8 +243,57 @@ class PorchNativeTests(unittest.TestCase):
             }
             with self.assertRaisesRegex(ValueError,"artist must seal the complete storytable"):
                 project.make({**first_authorization(prepared),"storySha256":"0"*64})
-            # The actual native source rows will change BEFORE the first film.
-            sealed=project.seal_story(story_form)
+            # The source arrangement is SEALED THROUGH THE ACTUAL local
+            # browser API, separately from consent and later movie creation.
+            with contextlib.redirect_stdout(io.StringIO()):
+                author_server=porch.serve(project,port=0)
+            author_thread=threading.Thread(
+                target=author_server.serve_forever,daemon=True)
+            author_thread.start()
+            try:
+                origin=f"http://127.0.0.1:{author_server.server_port}"
+                with urlopen(origin+"/api/porch/state") as response:
+                    before_story=json.load(response)
+                self.assertFalse(before_story["storytable"]["sealed"])
+                self.assertEqual(
+                    len(before_story["storytable"]["shots"]),
+                    len(paper_plan["shots"]))
+                story_request=Request(
+                    origin+"/api/porch/story/seal",
+                    data=json.dumps(story_form).encode(),headers={
+                        "Origin":origin,
+                        "X-Porch-Token":before_story["token"],
+                        "Content-Type":"application/json"})
+                attacked=Request(
+                    origin+"/api/porch/story/seal",
+                    data=json.dumps(story_form).encode(),headers={
+                        "Origin":"https://not-owner.example",
+                        "X-Porch-Token":before_story["token"],
+                        "Content-Type":"application/json"})
+                with self.assertRaises(HTTPError) as outside:
+                    urlopen(attacked)
+                self.assertEqual(outside.exception.code,403)
+                with urlopen(story_request) as response:
+                    story_answer=json.load(response)
+                    self.assertEqual(response.status,201)
+                sealed=story_answer["receipt"]
+                self.assertTrue(story_answer["state"]["storytable"]["sealed"])
+                # Browser song scrub must serve the REAL prepared WAV bytes
+                # and preserve native source identity.
+                wav=(project.tray/"song.wav").read_bytes()
+                with urlopen(Request(
+                     origin+"/api/porch/story/audio",
+                     headers={"Range":"bytes=0-31"})) as response:
+                    self.assertEqual(response.status,206)
+                    self.assertEqual(response.read(),wav[:32])
+                    self.assertEqual(response.headers["Content-Type"],"audio/wav")
+                with self.assertRaises(HTTPError) as replay:
+                    urlopen(story_request)
+                self.assertEqual(replay.exception.code,409)
+            finally:
+                author_server.shutdown()
+                author_server.server_close()
+                author_thread.join(timeout=3)
             self.assertTrue(iq.sha(sealed["storySha256"]))
             self.assertEqual(project.verify_story()[0],sealed)
             authored=project.verify_story()[1]
