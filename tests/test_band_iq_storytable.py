@@ -95,7 +95,7 @@ class StorytableSourceTests(unittest.TestCase):
         bad=copy.deepcopy(cards)
         bad["assets"]["shot-asset-0002"]["focus"]=[.2,.1]
         recorded.write_text(json.dumps(bad))
-        with self.assertRaisesRegex(ValueError,"authored snapshot changed"):
+        with self.assertRaisesRegex(ValueError,"source-pinned human storytable or sealed snapshot changed"):
             story.verified(seal,recorded,self.prepared,self.plan,self.cards,self.root)
         recorded.write_text(json.dumps(cards))
         (self.root/"source-002.png").write_bytes(b"source was swapped")
