@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex,nofollow">
+<title>VidMage · The Front Porch</title>
+<link rel="stylesheet" href="/porch.css">
+<script src="/porch.js" defer></script>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+<main class="shell">
+  <header class="mast">
+    <a href="/porch" class="brand" aria-label="VidMage front porch"><span class="icon-reel" aria-hidden="true">✳</span><span>vidmage<small>the front porch</small></span></a>
+    <div class="private"><span class="dot" aria-hidden="true"></span>YOUR COMPUTER · YOUR FILMS</div>
+  </header>
+  <section class="opening">
+    <div class="opening-copy">
+      <div class="eyebrow">AN INVITATION TO MAKE SOMETHING</div>
+      <h1>A song. Some pictures.<br><i>A little cinema.</i></h1>
+      <p>No timeline to learn. No render settings to untangle. Bring something you can use, then choose how it might move. Your source files stay yours.</p>
+      <div class="smallprint">Nothing is published. Nothing is kept unless you choose.</div>
+    </div>
+    <div class="opening-art" aria-hidden="true">
+      <div class="orb"><div class="orb-inner"><span class="disc-center">A <i>→</i> B</span></div></div>
+      <div class="sticker top">the first look</div><div class="sticker lower">made here, not elsewhere</div>
+    </div>
+  </section>
+  <div class="steps" aria-label="Three stages">
+    <div id="step-1" class="step current"><span>01</span> Bring</div>
+    <div id="step-2" class="step"><span>02</span> Let it take shape</div>
+    <div id="step-3" class="step"><span>03</span> See two films</div>
+  </div>
+  <section id="bring" class="chapter" aria-labelledby="bring-title">
+    <div class="chapter-heading"><div class="eyebrow">01 / THE RAW MATERIAL</div><h2 id="bring-title">What came with you?</h2><p>One real song and at least two images you made or have permission to use.</p></div>
+    <div class="bring-grid">
+      <div class="upload-card">
+        <span class="upload-index">SIDE A · THE SOUND</span>
+        <label for="song" class="upload-target"><span aria-hidden="true" class="big-symbol">♪</span><strong>Choose a song</strong><small>WAV, MP3, M4A, FLAC or OGG · up to 36 MB · up to 6 minutes</small></label>
+        <input type="file" accept=".wav,.mp3,.m4a,.flac,.ogg,audio/*" id="song">
+        <p id="song-name" class="upload-status">Nothing brought yet</p>
+      </div>
+      <div class="upload-card">
+        <span class="upload-index">SIDE B · THE IMAGE</span>
+        <label for="photos" class="upload-target"><span aria-hidden="true" class="big-symbol">▧</span><strong>Choose some pictures</strong><small>PNG, JPG or WEBP · 2–12 images · up to 12 MB each</small></label>
+        <input type="file" accept=".png,.jpg,.jpeg,.webp,image/*" multiple id="photos">
+        <p id="photo-count" class="upload-status">At least two for a first film</p>
+      </div>
+    </div>
+    <div class="photo-line" id="photo-line" aria-live="polite"></div>
+    <form id="consent-form" class="consent">
+      <div class="eyebrow">THE HUMAN PART · BEFORE ANY CAMERA MOVES</div>
+      <h3>Give this little project a name.</h3>
+      <label for="title">Project title</label><input id="title" type="text" maxlength="120" placeholder="A week together…" autocomplete="off" required>
+      <label for="maker">Your name or chosen review ID</label><input id="maker" type="text" maxlength="256" placeholder="The person giving permission" autocomplete="off" required>
+      <label class="tick"><input type="checkbox" id="rights" required><span>I own these files or have permission to make this video with them.</span></label>
+      <label class="tick"><input type="checkbox" id="derivatives" required><span>I approve local copies that fit the song and pictures into a film. My original files stay unchanged.</span></label>
+      <label class="tick"><input type="checkbox" id="no-release" required><span>I understand this is private, local work—not a release, public upload or paid AI service.</span></label>
+      <button type="submit" class="primary" id="accept">Lay out my materials <span aria-hidden="true">↗</span></button>
+    </form>
+  </section>
+  <section id="paper" class="chapter" hidden aria-labelledby="paper-title">
+    <div class="chapter-heading"><div class="eyebrow">02 / THE PAPER TRAY</div><h2 id="paper-title">Let's see what fits.</h2><p>The local studio listens to the actual song, sets shot boundaries and puts your owned pictures in order. It doesn't decide what's beautiful.</p></div>
+    <div class="paper-content">
+      <div class="paper-left">
+        <div class="receipt-strip">SOURCE FILES HELD HERE · NO MOVIE MADE YET</div>
+        <div class="still-note" id="source-recap"></div>
+        <button type="button" id="prepare" class="primary">Prepare my little film <span aria-hidden="true">↗</span></button>
+        <div id="paper-preview" hidden>
+          <div class="receipt-strip">PAPER PLAN COMPLETE · A FILM IS STILL A CHOICE</div>
+          <p id="plan-status"></p>
+          <h3>How should the camera feel?</h3>
+          <div id="lens-picker" class="lenses" role="group" aria-label="Camera language"></div>
+          <label for="director">Your new film approval signature</label>
+          <input id="director" type="text" maxlength="256" placeholder="An intentional second choice" autocomplete="off">
+          <label class="tick"><input type="checkbox" id="render-ok"><span>Make exactly two private, unselected trial films using this camera choice. Neither is automatically my final film.</span></label>
+          <button type="button" class="primary" id="make">Make my first two films <span aria-hidden="true">↗</span></button>
+        </div>
+      </div>
+      <div class="paper-right">
+        <div class="paper-sketch" aria-hidden="true"><div class="track"><span>♪</span><span>♪</span><span>♬</span></div><div class="frames"><i></i><i></i><i></i><i></i></div></div>
+        <small>THE FIRST CUT IS A QUESTION, NOT A CONTRACT</small>
+      </div>
+    </div>
+  </section>
+  <section id="films" class="chapter" hidden aria-labelledby="films-title">
+    <div class="chapter-heading"><div class="eyebrow">03 / THE REVEAL</div><h2 id="films-title">There are two ways to see it.</h2><p>Real movies, born from the same owned song and pictures. Now the choice belongs to you.</p></div>
+    <div class="film-success">
+      <div class="film-frames"><div>A</div><div>B</div></div>
+      <p>VidMage and native Playdeck each made a private trial. Both are intact and neither is selected.</p>
+      <a id="enter" href="/" class="primary">Enter my living workbench <span aria-hidden="true">↗</span></a>
+      <a href="/room" class="secondary-link">Go straight to watching both films →</a>
+    </div>
+  </section>
+  <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
+  <details class="underneath">
+    <summary>Under the floorboards · source receipts and limits</summary>
+    <p>The originals, transformed local copies, native source hashes and each human decision are kept separate. The software cannot infer permission to publish, use a paid provider, discard a film or automatically start another experiment.</p>
+    <div id="receipt-status" class="mono"></div>
+  </details>
+  <footer><span>VIDMAGE / STATIC COLLECTIVE</span><span>BRING ≠ RELEASE · PREPARE ≠ MAKE · MAKE ≠ KEEP</span></footer>
+</main>
+</body>
+</html>
