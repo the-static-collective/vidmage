@@ -206,6 +206,7 @@
       btn.addEventListener("click",()=>{
         shot.sourceAssetId=source.assetId;
         selectShot(activeShot);
+        touchDraft("Draft source changed; comparisons need fresh source pixels.");
       });
       $("story-photos").append(btn);
     });
@@ -219,6 +220,7 @@
     $("story-previous").disabled=activeShot===0;
     $("story-next").disabled=activeShot===shots.length-1;
     syncContactForShot();
+    refreshBitGuides();
   }
   function drawStorytable(){
     const table=state?.storytable;
@@ -650,6 +652,7 @@
     ];
     $("story-protect").checked=shot.protectText;
     selectShot(activeShot);
+    touchDraft("Draft focus changed. Old candidate pixels are stale.");
   }
   $("contact-image").addEventListener("change",contactControlsChanged);
   $("contact-x").addEventListener("input",contactControlsChanged);
@@ -716,6 +719,7 @@
     };
     invalidateContact("Alternative applied to this on-screen draft only. Storytable still unsealed.");
     selectShot(activeShot);
+    touchDraft("Alternative entered your draft; no Storytable has been sealed.");
   });
   $("contact-leave").addEventListener("click",()=>{
     invalidateContact("Your original on-screen draft is unchanged. No comparison was applied.");
@@ -725,6 +729,7 @@
   $("story-protect").addEventListener("change",()=>{
     if(!storyDraft||state?.storytable?.sealed)return;
     storyDraft[activeShot].protectText=$("story-protect").checked;
+    touchDraft("Draft text treatment changed. Existing comparisons are stale.");
   });
   $("story-previous").addEventListener("click",()=>selectShot(activeShot-1));
   $("story-next").addEventListener("click",()=>selectShot(activeShot+1));
