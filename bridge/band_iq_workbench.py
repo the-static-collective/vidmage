@@ -161,6 +161,36 @@ class Workbench:
                                       item["observationSha256"] or ""))
         return result,bad
 
+    def restore_revision(self,revision_sha):
+        need(iq.sha(revision_sha),"exact prior revision receipt identity required")
+        revisions,observations,bad=self.discover()
+        need(revision_sha in revisions,
+             "prior revision receipt is not a known private project artifact")
+        path,record=revisions[revision_sha]
+        source=self.first.get_decision()
+        need(source is not None and source["decision"]=="ANOTHER_EXPERIMENT" and
+             record["sourceReviewSha256"]==source["reviewSha256"] and
+             record["humanQuestionVerbatim"]==source["nextQuestion"] and
+             record["originalVidmageMovieSha256"]==self.first.pair["vidmageFilmSha256"] and
+             record["originalPlaydeckMovieSha256"]==self.first.pair["playdeckFilmSha256"] and
+             record["humanKeep"] is False and record["publish"] is False,
+             "restored revision must belong to this original human question")
+        proof=nextq.reopen_revision(path)
+        need(proof["revisionSha256"]==record["revisionSha256"] and
+             proof["movieSha256"]==record["newMovieSha256"],
+             "reopened source bytes do not identify this third film")
+        if self.first.next_sources is not None:
+            questions=nextq.question_set(self.first,*self.first.next_sources)
+            need(questions["questionSetSha256"]==record["questionSetSha256"],
+                 "original question or previously authorized source selection moved")
+        self.first.next_result={
+            "revisionRecord":str(path),
+            "film":record["outputLocalPath"],
+            "movieSha256":record["newMovieSha256"],
+            "revisionSha256":record["revisionSha256"],
+        }
+        return self.first.next_result
+
     def select(self,revision_sha,observation_sha):
         need(iq.sha(revision_sha) and iq.sha(observation_sha),
              "select an exact revision and measured observation receipt")
@@ -176,6 +206,7 @@ class Workbench:
                 revision=revisions[revision_sha][0],
                 observation=observations[observation_sha][0],
                 ac_record_dir=self.ac_dir)
+            self.restore_revision(revision_sha)
             self.ac_bench=bench
             self.selected_pair=(revision_sha,observation_sha)
             return bench.state()
@@ -224,6 +255,8 @@ class Workbench:
             "steps":steps,
             "candidates":candidates,
             "ignoredInvalidReceipts":bad,
+            "activeRevision":self.first.next_result["revisionSha256"]
+                              if self.first.next_result else None,
             "activePair":None if not active else {
                  "revisionSha256":self.selected_pair[0],
                  "observationSha256":self.selected_pair[1],
@@ -308,7 +341,7 @@ class WorkbenchHandler(ac.ACHandler):
 
     def do_POST(self):
         route=urlsplit(self.path).path
-        if route=="/api/workbench/select":
+        if route in ("/api/workbench/select","/api/workbench/restore"):
             expected="http://127.0.0.1:"+str(self.server.server_port)
             if (self.headers.get("Host")!=expected.removeprefix("http://") or
                 self.headers.get("Origin")!=expected or
@@ -320,11 +353,16 @@ class WorkbenchHandler(ac.ACHandler):
                 length=int(self.headers.get("Content-Length","0"))
                 need(0<length<=1000,"choice form too large")
                 body=json.loads(self.rfile.read(length))
-                need(isinstance(body,dict) and set(body)=={
-                     "revisionSha256","observationSha256"},
-                     "choose exact source evidence; no arbitrary local paths accepted")
-                chosen=self.workbench.select(body["revisionSha256"],body["observationSha256"])
-                return self._json(200,{"ok":True,"ac":chosen})
+                if route=="/api/workbench/select":
+                    need(isinstance(body,dict) and set(body)=={
+                         "revisionSha256","observationSha256"},
+                         "choose exact observation pair, never arbitrary local paths")
+                    chosen=self.workbench.select(body["revisionSha256"],body["observationSha256"])
+                    return self._json(200,{"ok":True,"ac":chosen})
+                need(isinstance(body,dict) and set(body)=={"revisionSha256"},
+                     "only a known prior revision can be resumed")
+                resumed=self.workbench.restore_revision(body["revisionSha256"])
+                return self._json(200,{"ok":True,"trial":resumed})
             except (OSError,ValueError,KeyError,TypeError):
                 return self._error(409,"A/C source choice refused; verify local evidence")
         if route in ("/api/decision","/api/next/execute","/api/next/observe"):
