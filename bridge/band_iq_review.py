@@ -97,6 +97,8 @@ class ReviewBench:
         }
         self.next_sources=None
         self.next_result=None
+        self.next_blender_root=None
+        self.last_observation=None
         self.get_decision()  # early refusal if a preexisting receipt is corrupted
 
     @staticmethod
@@ -162,6 +164,20 @@ class ReviewBench:
                               "revisionSha256":record["revisionSha256"]}
             return self.next_result
 
+    def observe_next(self):
+        # Explicit read-only in-room analysis is a separate human action;
+        # only actual completed next trials may be analyzed.
+        need(self.next_blender_root is not None and self.next_sources is not None and
+             isinstance(self.next_result,dict),
+             "native Doctor observation needs an existing performed local revision")
+        from . import band_iq_question_lab as lab
+        from . import band_iq_next_question as nxt
+        revision=nxt.load(self.next_result["revisionRecord"])
+        result,path=lab.observe(self,revision,*self.next_sources,
+                                self.next_blender_root,self.root/"question-observations")
+        self.last_observation={"observation":result,"receipt":path}
+        return result
+
     def state(self):
         current=self.get_decision()
         proposal=next(p for p in self.cycle["imagine"]
@@ -189,7 +205,8 @@ class ReviewBench:
             "constraints":{"keepMeans":"chosen for further local continuation, NOT publication",
                            "publication":False,"export":False,"automaticEdit":False,
                            "creativeJudgmentByScore":False,
-                           "nextQuestionToolsConfigured":self.next_sources is not None},
+                           "nextQuestionToolsConfigured":self.next_sources is not None,
+                           "nativeQuestionDoctorConfigured":self.next_blender_root is not None},
         }
 
     def commit(self,form):
@@ -371,7 +388,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path=urlsplit(self.path).path
-        if path not in ("/api/decision","/api/next/execute"):
+        if path not in ("/api/decision","/api/next/execute","/api/next/observe"):
             self._error(404,"unknown route")
             return
         # The loopback address alone does NOT establish CSRF or creator authorization.
@@ -394,11 +411,16 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/decision":
                 receipt=self.bench.commit(data)
                 self._json(201,{"ok":True,"receipt":receipt})
-            else:
+            elif path=="/api/next/execute":
                 need(isinstance(data,dict) and set(data)=={"authorization"},
                      "next execution needs one explicit authorization")
                 result=self.bench.next_execute(data["authorization"])
                 self._json(201,{"ok":True,"trial":result})
+            else:
+                need(data=={"inspectActualFilms":True},
+                     "technical analysis requires a separate explicit user request")
+                observation=self.bench.observe_next()
+                self._json(200,{"ok":True,"observation":observation})
         except (ValueError,TypeError,KeyError,OSError,UnicodeError) as exc:
             self._error(409,"review refused; check explicit choice and source integrity")
 
@@ -424,6 +446,7 @@ def cli():
         p.add_argument("--"+field,required=True)
     for field in ("next-plan","next-cards","next-observation","next-audio","next-asset-root"):
         p.add_argument("--"+field)
+    p.add_argument("--next-blender-root",help="explicit exact-pinned native Blender checkout for read-only 006 observation")
     p.add_argument("--port",type=int,default=8764)
     p.add_argument("--open-browser",action="store_true")
     args=p.parse_args()
@@ -439,6 +462,11 @@ def cli():
         bench.enable_next_sources(plan=args.next_plan,cards=args.next_cards,
                                   observation=args.next_observation,audio=args.next_audio,
                                   asset_root=args.next_asset_root)
+    if args.next_blender_root is not None:
+        need(bench.next_sources is not None,
+             "native read-only question laboratory requires exact original project inputs")
+        # Do not load arbitrary vendor code until actual user requests an inspection.
+        bench.next_blender_root=args.next_blender_root
     http=serve(bench,args.port,open_browser=args.open_browser)
     try:
         http.serve_forever()
