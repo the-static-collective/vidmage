@@ -117,7 +117,7 @@ def validate_audio(obs):
 def validate_annotations(entries, report):
     require(isinstance(entries, list) and len(entries) <= 10000, "bounded annotations required")
     windows = {row["id"] for row in report["windows"]}
-    kinds = {"deliberate-stillness", "protected-scene"}
+    kinds = {"deliberate-stillness", "protected-scene", "motion-review-authorized"}
     selected = {}
     for entry in entries:
         require(isinstance(entry, dict) and set(entry) ==
@@ -145,9 +145,18 @@ def build_cycle(data, previous=None):
         require(previous["sourceVideoSha256"] == report["sourceVideoSha256"],
                 "cross-source memory requires a separately authorized transition")
 
-    candidates = sorted(report["windows"], key=lambda w:(-w["weaknessScore"], w["start"], w["id"]))
-    targets = [w for w in candidates if w["id"] not in authored]
-    protected = sorted(authored)
+    # Native Doctor includes stasis in its technical index, but BAND-IQ must not
+    # infer that a quiet shot is unwanted. Rank solely by *non-stasis* observations.
+    def nonstillness(row):
+        c = row["components"]
+        return round(.25*c["sourceOveruse"] + .20*c["recentRepetition"] +
+                     .15*c["noveltyDeficit"] + .10*c["transitionJolt"], 6)
+
+    candidates = sorted(report["windows"], key=lambda w:(-nonstillness(w), w["start"], w["id"]))
+    protected = sorted(k for k in authored if authored[k]["kind"] != "motion-review-authorized")
+    review_authorized = sorted(k for k in authored if authored[k]["kind"] == "motion-review-authorized")
+    targets = [w for w in candidates if w["id"] not in protected and
+               (nonstillness(w) > 0.05 or w["id"] in review_authorized)]
     perception = {
         "doctorReportId": report.get("id"),
         "doctorReportSha256": digest(report),
@@ -166,7 +175,9 @@ def build_cycle(data, previous=None):
     relationships = {
         "materialUse": "read the observed 008f source rows only; do not infer objects",
         "artistProtectedWindowIds": protected,
+        "artistAuthorizedMotionReviewIds": review_authorized,
         "unprotectedObservedWindowIds": [w["id"] for w in targets],
+        "nonStillnessMetric": "0.25 overuse + 0.20 repetition + 0.15 novelty deficit + 0.10 jolt; stasis excluded",
         "sourceAuthority": "read-only observed locally",
     }
     next_window = targets[0] if targets else None
@@ -185,8 +196,8 @@ def build_cycle(data, previous=None):
             "targetEnd": w["end"] if w else None,
             "measuredDominantWeakness": w["dominantWeakness"] if w else None,
             "experimentQuestion": (
-                f"Would {camera} change the observed {w['dominantWeakness']} in {w['id']}?"
-                if w else "No unprotected window; ask the author before proposing a change."),
+                f"What happens to verified non-stillness measurements under {camera} in {w['id']}?"
+                if w else "No author-permitted, non-stillness target; ask the author first."),
             "status": "proposal-only" if w else "HOLD-protected",
             "execution": False,
             "keep": False,
@@ -260,10 +271,15 @@ def compare_trial(cycle, before, after, human_review=None):
     after_map = {w["id"]:w for w in after["windows"]}
     require(before_map.keys() == after_map.keys(), "trial changed window identities")
     # A protected window is *not* eligible as proof of an improvement objective.
+    def nonstillness(row):
+        c=row["components"]
+        return .25*c["sourceOveruse"]+.20*c["recentRepetition"]+\
+               .15*c["noveltyDeficit"]+.10*c["transitionJolt"]
     rows = [{"id":k, "protected":k in protected,
              "before":before_map[k]["weaknessScore"],
              "after":after_map[k]["weaknessScore"],
-             "delta":round(after_map[k]["weaknessScore"]-before_map[k]["weaknessScore"],6)}
+             "delta":round(after_map[k]["weaknessScore"]-before_map[k]["weaknessScore"],6),
+             "nonStillnessDelta":round(nonstillness(after_map[k])-nonstillness(before_map[k]),6)}
             for k in before_map]
     review = None
     if human_review is not None:
@@ -273,7 +289,7 @@ def compare_trial(cycle, before, after, human_review=None):
         bounded(human_review["operatorAttestationId"], "human attestation required")
         review = human_review
     measurable = [x for x in rows if not x["protected"]]
-    aggregate = round(sum(x["delta"] for x in measurable)/len(measurable),6) if measurable else None
+    aggregate = round(sum(x["nonStillnessDelta"] for x in measurable)/len(measurable),6) if measurable else None
     body = {"schema":TRIAL,"cycleSha256":cycle["cycleSha256"],
             "beforeReportSha256":digest(before),"afterReportSha256":digest(after),
             "beforeVideoSha256":before["sourceVideoSha256"],
