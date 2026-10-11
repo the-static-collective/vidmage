@@ -261,6 +261,10 @@ class Handler(BaseHTTPRequestHandler):
             path=self.bench.require_unchanged(side)
             length=path.stat().st_size
             need(length>0,"empty movie cannot be reviewed")
+        except (OSError,ValueError):
+            self._error(409,"media changed or unavailable")
+            return
+        try:
             rng=self.headers.get("Range")
             if rng:
                 match=re.fullmatch(r"bytes=(\d*)-(\d*)",rng)
