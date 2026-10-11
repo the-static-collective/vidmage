@@ -111,8 +111,8 @@
     });
     const found=table.images.find(a=>a.assetId===shot.sourceAssetId);
     if(found)$("story-preview").src=found.url;
-    $("story-preview").style.objectPosition=
-      Math.round(shot.focus[0]*100)+"% "+Math.round(shot.focus[1]*100)+"%";
+    $("story-preview").className="story-focus-x-"+Math.round(shot.focus[0]*100)+
+      " story-focus-y-"+Math.round(shot.focus[1]*100);
     $("story-timeline").querySelectorAll("button").forEach((btn,i)=>{
       btn.setAttribute("aria-pressed",String(i===activeShot));
     });
@@ -136,7 +136,8 @@
       const button=document.createElement("button");
       button.type="button";
       button.className="story-shot";
-      button.style.flexGrow=String(Math.max(.05,(shot.end-shot.start)/total*100));
+      button.classList.add("story-span-"+Math.max(1,Math.min(5,
+        Math.round((shot.end-shot.start)/(total/storyDraft.length)))));
       button.setAttribute("aria-label",shotText(shot,i));
       button.setAttribute("aria-pressed",String(i===activeShot));
       const mark=document.createElement("span");mark.className="story-mark";
