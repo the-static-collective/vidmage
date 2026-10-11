@@ -127,6 +127,10 @@ def render(plan,cards,observations,audio,root,output,kinetic=False,cinematic=Non
             raise ValueError("Bounded BAND-IQ camera mode required")
         if not isinstance(cinematic.get("proposalSha256"),str) or len(cinematic["proposalSha256"])!=64:
             raise ValueError("Selected proposal evidence required")
+        if not isinstance(cinematic.get("targetStart"),(int,float)) or not isinstance(cinematic.get("targetEnd"),(int,float)) or not (
+            math.isfinite(cinematic["targetStart"]) and math.isfinite(cinematic["targetEnd"]) and
+            0 <= cinematic["targetStart"] < cinematic["targetEnd"]):
+            raise ValueError("Cinematic performance requires a bounded target time window")
     output=Path(output).resolve();audio=Path(audio).resolve(strict=True)
     if output.exists() or output.with_suffix(".receipt.json").exists():
         raise FileExistsError("Create-only: will not replace an output")
@@ -153,7 +157,7 @@ def render(plan,cards,observations,audio,root,output,kinetic=False,cinematic=Non
                 pulse=max([max(0,1-abs(tm-t)/.52)**2 for t in pulses] or [0])
                 if not choice.get("kineticSafe") or source["mode"]=="protect-text":pulse=0
                 frame=frame_for(source,fraction,energy,pulse)
-                if cinematic is not None and source["mode"]!="protect-text":
+                if cinematic is not None and cinematic["targetStart"] <= tm < cinematic["targetEnd"] and source["mode"]!="protect-text":
                     frame=selected_camera(frame,cinematic["cameraMode"],tm,at_shot)
                 process.stdin.write(frame.tobytes())
             process.stdin.close()
@@ -175,7 +179,7 @@ def render(plan,cards,observations,audio,root,output,kinetic=False,cinematic=Non
              "sources":{k:v["sha256"] for k,v in assets.items()},
              "kineticSelected":bool(kinetic),"kineticEvents":pulses,
              "humanKeep":False,"published":False,"providerCredits":0,"externalGenerations":0,
-             "cinematicSelection":({k:cinematic[k] for k in ("lensId","cameraMode","proposalSha256","cycleSha256","operatorAttestationId")} if cinematic else None),
+             "cinematicSelection":({k:cinematic[k] for k in ("lensId","cameraMode","proposalSha256","cycleSha256","operatorAttestationId","targetStart","targetEnd")} if cinematic else None),
              "streams":probe["streams"]}
     output.with_suffix(".receipt.json").write_text(json.dumps(receipt,indent=2)+"\n")
     return receipt
