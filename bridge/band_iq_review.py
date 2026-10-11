@@ -292,7 +292,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def _video(self,side):
         try:
-            path=self.bench.require_unchanged(side)
+            if side=="next":
+                trial=self.bench.next_result
+                need(isinstance(trial,dict),"no independently performed next trial")
+                path=Path(trial["film"]).resolve(strict=True)
+                need(path.is_file() and donors.sha_file(path)==trial["movieSha256"],
+                     "next trial file changed")
+            else:
+                path=self.bench.require_unchanged(side)
             length=path.stat().st_size
             need(length>0,"empty movie cannot be reviewed")
         except (OSError,ValueError):
@@ -357,7 +364,7 @@ class Handler(BaseHTTPRequestHandler):
                                 "trial":self.bench.next_result})
             except (ValueError,KeyError,OSError,TypeError):
                 self._error(409,"next questions unavailable until human review and exact sources")
-        elif path in ("/media/a","/media/b"):
+        elif path in ("/media/a","/media/b","/media/next"):
             self._video(path.rsplit("/",1)[-1])
         else:
             self._static(path)
