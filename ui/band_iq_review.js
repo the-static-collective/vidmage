@@ -4,6 +4,8 @@
   const a = $("a"), b = $("b");
   let context = null;
   let committed = false;
+  let nextSet = null;
+  let nextRendered = false;
 
   const text = (id, value) => { $(id).textContent = String(value); };
   const outcomeNames = {
@@ -20,6 +22,10 @@
     text("sealed-outcome", outcomeNames[decision.decision] || "Review recorded");
     text("sealed-receipt", "Review receipt · SHA-256 " + decision.reviewSha256);
     text("status", "One human review receipt sealed · read-only");
+    if (decision.decision === "ANOTHER_EXPERIMENT" &&
+        context && context.constraints.nextQuestionToolsConfigured) {
+      loadNextQuestion();
+    }
   }
 
   async function fetchContext() {
@@ -47,6 +53,130 @@
     text("same-images", data.source.imagesSame ? "Verified same" : "HOLD");
     text("same-question", data.source.questionSame ? "Verified same" : "HOLD");
     if (data.decision) showCommitted(data.decision);
+  }
+
+  function fillOptions(element, choices) {
+    element.replaceChildren();
+    for (const [value, label] of choices) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      element.appendChild(option);
+    }
+  }
+
+  function activeExperiment() {
+    if (!nextSet) return null;
+    const checked = document.querySelector('input[name="next-operation"]:checked');
+    return checked ? nextSet.proposals.find(p => p.kind === checked.value) : null;
+  }
+
+  function refreshReplacement() {
+    const selected = activeExperiment();
+    if (!selected || selected.kind !== "SWAP_CARD") return;
+    const choices = selected.eligibleReplacementAssetIdsByShot[$("next-shot").value] || [];
+    fillOptions($("next-replacement"), choices.map(id => [id, id]));
+  }
+
+  function updateNextControls() {
+    const selected = activeExperiment();
+    const hasShot = selected && selected.kind !== "CHANGE_LENS";
+    $("next-shot-fields").hidden = !hasShot;
+    $("next-replacement-fields").hidden = !selected || selected.kind !== "SWAP_CARD";
+    $("next-focus-fields").hidden = !selected || selected.kind !== "REFOCUS_CARD";
+    $("next-lens-fields").hidden = !selected || selected.kind !== "CHANGE_LENS";
+    if (hasShot) {
+      fillOptions($("next-shot"),selected.eligibleShotIds.map(id => [id,id]));
+      refreshReplacement();
+    } else if (selected) {
+      fillOptions($("next-lens"),selected.eligibleLensIds.map(id => [id,id]));
+    }
+  }
+
+  async function loadNextQuestion() {
+    if (nextSet || nextRendered) return;
+    $("next-lab").hidden = false;
+    text("next-feedback", "Verifying the author's question and the exact source films…");
+    try {
+      const response = await fetch("/api/next/questions", {cache:"no-store"});
+      const result = await response.json();
+      if (!response.ok || !result.ok || !result.questions) {
+        throw new Error(result.message || "Next-question material not yet available.");
+      }
+      nextSet = result.questions;
+      text("next-question-text", "Your question: “" + nextSet.humanQuestionVerbatim + "”");
+      for (const radio of document.querySelectorAll('input[name="next-operation"]')) {
+        const proposal = nextSet.proposals.find(p => p.kind === radio.value);
+        radio.disabled = !proposal || proposal.status !== "proposal-only";
+      }
+      const first = [...document.querySelectorAll('input[name="next-operation"]')]
+        .find(radio => !radio.disabled);
+      if (first) first.checked = true;
+      updateNextControls();
+      text("next-feedback", "Choose one experimental operation. None has run.");
+    } catch (error) {
+      text("next-feedback",error.message || "Source verification refused.");
+      $("next-commit").disabled = true;
+    }
+  }
+
+  async function submitNext(event) {
+    event.preventDefault();
+    if (!nextSet || nextRendered || !context) return;
+    const proposal = activeExperiment();
+    if (!proposal || proposal.status !== "proposal-only") {
+      text("next-feedback", "No available experiment is selected.");
+      return;
+    }
+    const kind = proposal.kind;
+    const choice = {
+      schema:"vidmage/band-iq-005-trial-authorization/v1",
+      questionSetSha256:nextSet.questionSetSha256,
+      proposalSha256:proposal.proposalSha256,
+      operatorAttestationId:$("next-operator").value.trim(),
+      decision:"RENDER_ONE_LOCAL_TRIAL",
+      shotId:kind === "CHANGE_LENS" ? null : $("next-shot").value,
+      replacementAssetId:kind === "SWAP_CARD" ? $("next-replacement").value : null,
+      newFocus:kind === "REFOCUS_CARD"
+        ? [Number($("next-focus-x").value),Number($("next-focus-y").value)] : null,
+      newLensId:kind === "CHANGE_LENS" ? $("next-lens").value : null,
+      allowLocalExecution:true,
+      allowPaidProviders:false,
+      allowNetworkUpload:false,
+    };
+    if (!choice.operatorAttestationId || !$("next-acknowledge").checked) {
+      text("next-feedback", "A new independent signature and acknowledgement are required.");
+      return;
+    }
+    const approved = window.confirm(
+      "Render one NEW local trial of " + kind + "?\n\n" +
+      "Source films and the earlier review will remain unchanged. " +
+      "This does not select KEEP or publish anything."
+    );
+    if (!approved) return;
+    $("next-commit").disabled = true;
+    text("next-feedback","Rendering your one approved local experiment…");
+    try {
+      const response = await fetch("/api/next/execute",{
+        method:"POST",cache:"no-store",
+        headers:{"Content-Type":"application/json",
+                 "X-Review-Token":context.reviewToken},
+        body:JSON.stringify({authorization:choice}),
+      });
+      const result=await response.json();
+      if (!response.ok || !result.ok || !result.trial) {
+        throw new Error(result.message || "The trial was refused.");
+      }
+      nextRendered=true;
+      $("next-form").hidden=true;
+      $("next-result").hidden=false;
+      $("next-video").src="/media/next";
+      text("next-sha","Verified third-film SHA-256 "+result.trial.movieSha256);
+      text("next-feedback","Local trial completed. A new human review is still required to KEEP.");
+    } catch (error) {
+      text("next-feedback",error.message || "The new trial was refused.");
+      $("next-commit").disabled=false;
+    }
   }
 
   function changeAudio(master) {
@@ -145,6 +275,11 @@
     radio.addEventListener("change", updateQuestionVisibility);
   });
   $("review-form").addEventListener("submit", submit);
+  $("next-form").addEventListener("submit",submitNext);
+  $("next-shot").addEventListener("change",refreshReplacement);
+  document.querySelectorAll('input[name="next-operation"]').forEach(radio => {
+    radio.addEventListener("change",updateNextControls);
+  });
   changeAudio("a");
   fetchContext().then(applyContext).catch((error) => {
     text("status", "HOLD · local review unavailable");
