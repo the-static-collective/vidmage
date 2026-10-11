@@ -133,6 +133,22 @@ def validate_annotations(entries, report):
     return selected
 
 
+def assemble_input(doctor_envelope, audio_observation=None, artist_annotations=None):
+    """Carry a genuine native scan envelope into the versioned planner input."""
+    require(isinstance(doctor_envelope, dict) and
+            set(doctor_envelope)=={"report","reportSha256","sourceVideoSha256"},
+            "native Doctor envelope required")
+    report=validate_report(doctor_envelope["report"])
+    require(digest(report)==doctor_envelope["reportSha256"] and
+            report["sourceVideoSha256"]==doctor_envelope["sourceVideoSha256"],
+            "Doctor envelope changed after native scan")
+    validate_audio(audio_observation)
+    annotations=[] if artist_annotations is None else artist_annotations
+    validate_annotations(annotations,report)
+    return {"schema":INPUT,"doctorReport":report,
+            "audioObservation":audio_observation,"artistAnnotations":annotations}
+
+
 def build_cycle(data, previous=None):
     require(isinstance(data, dict) and data.get("schema") == INPUT, "input schema invalid")
     require(set(data) == {"schema", "doctorReport", "audioObservation", "artistAnnotations"},
@@ -327,6 +343,9 @@ def write_once(directory, record, identity_field):
 def cli():
     p = argparse.ArgumentParser(description="BAND-IQ evidence-only compositor")
     s = p.add_subparsers(dest="command", required=True)
+    setup=s.add_parser("assemble")
+    setup.add_argument("native_doctor_envelope");setup.add_argument("output_file")
+    setup.add_argument("--audio");setup.add_argument("--artist")
     a=s.add_parser("propose")
     a.add_argument("input");a.add_argument("output_dir");a.add_argument("--previous")
     b=s.add_parser("compare")
@@ -334,7 +353,17 @@ def cli():
     b.add_argument("output_dir");b.add_argument("--human-review")
     args=p.parse_args()
     read=lambda name:json.loads(Path(name).read_text(encoding="utf-8"))
-    if args.command=="propose":
+    if args.command=="assemble":
+        output=Path(args.output_file)
+        require(not output.exists(), "input file exists; create-only")
+        result=assemble_input(read(args.native_doctor_envelope),
+                              read(args.audio) if args.audio else None,
+                              read(args.artist) if args.artist else None)
+        output.parent.mkdir(parents=True,exist_ok=True)
+        with output.open("x",encoding="utf8") as out:
+            json.dump(result,out,indent=2,sort_keys=True)
+        print(json.dumps({"input":str(output),"sourceVideoSha256":result["doctorReport"]["sourceVideoSha256"]}))
+    elif args.command=="propose":
         result=build_cycle(read(args.input),read(args.previous) if args.previous else None)
         out=write_once(args.output_dir,result,"cycleSha256")
         print(json.dumps({"cycle":out,"sha256":result["cycleSha256"],"proposals":6}))
