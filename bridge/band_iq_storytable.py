@@ -12,13 +12,14 @@ from pathlib import Path
 from . import band_iq as iq
 from . import band_iq_film_loop as loop
 from . import scene_card_film as film
+from . import band_iq_candidate_tray as cross
 
 SCHEMA="vidmage/band-iq-010-human-storytable/v1"
 MAX_SHOTS=256
 
 def need(ok,msg):iq.require(ok,msg)
 
-def author(form,paper_tray,plan,original_cards,asset_root):
+def author(form,paper_tray,plan,original_cards,asset_root,*,materialize_bits=False):
     need(isinstance(form,dict) and set(form)=={
         "paperTraySha256","operatorAttestationId","decision",
         "shots","preserveOriginals","publish","allowPaidProviders",
@@ -50,10 +51,8 @@ def author(form,paper_tray,plan,original_cards,asset_root):
     assets={}
     cards=[]
     history=[]
-    for i,(timing,selection) in enumerate(zip(old_shots,choices)):
-        need(isinstance(selection,dict) and set(selection)=={
-            "shotId","sourceAssetId","focus","protectText"},
-            "each shot requires one exact owned source, framing and text protection")
+    clean_shots=cross.validate_draft_shots(choices,source)
+    for i,(timing,selection) in enumerate(zip(old_shots,clean_shots)):
         sid=timing["id"];aid=selection["sourceAssetId"];focus=selection["focus"]
         need(selection["shotId"]==sid and aid in source,
              "authored shot ID or owned image choice unknown")
@@ -67,20 +66,34 @@ def author(form,paper_tray,plan,original_cards,asset_root):
         key="shot-asset-%04d"%(i+1)
         # Every shot occurrence receives its own asset alias so an identical
         # photo can be cropped/protected differently in two distinct windows.
+        path=source[aid]["path"]
+        bound_sha=expected[aid]
+        provenance=None
+        if "crossBit" in selection:
+            provenance,png=cross.compose(aid,selection["crossBit"],source,asset_root)
+            if materialize_bits:
+                cross.materialize(provenance,png,asset_root)
+            else:
+                cross.verify_derived(provenance,source,asset_root)
+            path=cross.derived_path(provenance)
+            bound_sha=provenance["composedImageSha256"]
         assets[key]={
-            "path":source[aid]["path"],
+            "path":path,
             "mode":"protect-text" if selection["protectText"] else "subject",
             "focus":focus,
         }
         cards.append({"shotId":sid,"assetId":key,"kineticSafe":False})
-        history.append({
+        row={
             "shotId":sid,
             "sourceAssetId":aid,
-            "sourceSha256":expected[aid],
+            "sourceSha256":bound_sha,
             "start":timing["start"],"end":timing["end"],
             "focus":focus,
             "protectText":selection["protectText"],
-        })
+        }
+        if provenance is not None:
+            row["crossBit"]=provenance
+        history.append(row)
     result_cards={"schema":"vidmage/editorial-scene-cards/v1",
                   "status":"proposal-only","assets":assets,"shots":cards}
     film.validate(plan,result_cards,
@@ -120,10 +133,20 @@ def verified(receipt_path,cards_path,paper_tray,plan,original_cards,asset_root):
     saved=nxt.ensure_record(json.loads(Path(receipt_path).read_text()),
                             SCHEMA,"storySha256")
     authored=json.loads(Path(cards_path).read_text())
-    selections=[{
-        "shotId":x["shotId"],"sourceAssetId":x["sourceAssetId"],
-        "focus":x["focus"],"protectText":x["protectText"],
-    } for x in saved["shotAssignments"]]
+    selections=[]
+    for x in saved["shotAssignments"]:
+        choice={
+            "shotId":x["shotId"],"sourceAssetId":x["sourceAssetId"],
+            "focus":x["focus"],"protectText":x["protectText"],
+        }
+        if "crossBit" in x:
+            fragment=x["crossBit"]
+            choice["crossBit"]={
+                "sourceAssetId":fragment["grabbedSourceAssetId"],
+                "crop":fragment["crop"],"place":fragment["place"],
+                "opacity":fragment["opacity"],
+            }
+        selections.append(choice)
     form={
         "paperTraySha256":paper_tray["paperTraySha256"],
         "operatorAttestationId":saved["operatorAttestationId"],
