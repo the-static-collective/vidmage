@@ -1,0 +1,82 @@
+name: VIDMAGE BAND-IQ 006 Question Laboratory
+on:
+  push:
+    branches: [experiment/band-iq-006-question-laboratory]
+  pull_request:
+    paths:
+      - "bridge/band_iq_question_lab.py"
+      - "tests/test_band_iq_question_lab.py"
+      - "tests/test_band_iq_playdeck_native.py"
+      - "bridge/band_iq_review.py"
+      - "ui/band_iq_review.js"
+      - "docs/BAND_IQ_006.md"
+      - ".github/workflows/band-iq-006.yml"
+permissions:
+  contents: read
+jobs:
+  bounded-source-math:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install CPU-only source inspector dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install 'numpy>=1.26,<3' 'opencv-python-headless>=4.10,<5'
+      - name: Bounded edit/refusal and pixel evidence tests
+        run: |
+          python -m unittest -v tests/test_band_iq_question_lab.py
+          python -m unittest -v tests/test_band_iq_next_question.py tests/test_band_iq_review.py
+          python -m compileall -q bridge tests
+      - name: Local-only browser script and no remote resources
+        run: |
+          node --check ui/band_iq_review.js
+          ! grep -E 'https?://|<script[^>]+src="https?://' ui/band_iq_review.html
+  source-pinned-native-three-films:
+    needs: bounded-source-math
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Pin all native donor sources
+        run: |
+          git clone --quiet https://github.com/the-static-collective/the-haunted-blender.git donor-blender
+          git -C donor-blender checkout --detach cf0256a49ac8aa879cf2a044847d248177fcfad9
+          test "$(git -C donor-blender rev-parse HEAD)" = cf0256a49ac8aa879cf2a044847d248177fcfad9
+          git clone --quiet https://github.com/the-static-collective/the-haunted-toaster.git donor-toaster
+          git -C donor-toaster checkout --detach 3652c2a96b6b287cda316d1c92daadf7c7417eaf
+          test "$(git -C donor-toaster rev-parse HEAD)" = 3652c2a96b6b287cda316d1c92daadf7c7417eaf
+          git clone --quiet https://github.com/the-static-collective/playdeck.git donor-playdeck
+          git -C donor-playdeck checkout --detach 012186fd67f4c4ef1c6591fc5e29cb559b5a80d0
+          test "$(git -C donor-playdeck rev-parse HEAD)" = 012186fd67f4c4ef1c6591fc5e29cb559b5a80d0
+      - name: CPU-only media and native Remotion tooling
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install Pillow==12.1.1 'numpy>=1.26,<3' 'opencv-python-headless>=4.10,<5'
+          npm --prefix donor-playdeck install --no-audit --no-fund
+      - name: Native two-film review, third-film author revision, real double Doctor scans and pixel proof
+        env:
+          VIDMAGE_BLENDER_ROOT: ${{ github.workspace }}/donor-blender
+          VIDMAGE_TOASTER_ROOT: ${{ github.workspace }}/donor-toaster
+          VIDMAGE_PLAYDECK_ROOT: ${{ github.workspace }}/donor-playdeck
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/donor-blender
+        run: |
+          python -m unittest -v tests/test_band_iq_playdeck_native.py
+          python -m unittest -v tests/test_band_iq_question_lab.py
+      - name: Private user media and experiment outputs must remain out of repository
+        run: |
+          test ! -d ./private
+          test ! -d ./media
