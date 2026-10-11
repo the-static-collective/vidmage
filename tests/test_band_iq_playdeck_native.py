@@ -180,6 +180,89 @@ class NativePlaydeckTest(unittest.TestCase):
                     "acknowledgedTrialOnly":True,
                 })
 
+            # BAND-IQ 005: a DIFFERENT deliberate 004 review asks a real
+            # next question. Three candidate experiment types are only
+            # proposals until an independent named second creator action.
+            from bridge import band_iq_next_question as nxt
+            next_paths={**paths,"record_dir":root/"actual-movie-next-question"}
+            next_bench=review.ReviewBench(**next_paths)
+            another=next_bench.commit({
+                "decision":"ANOTHER_EXPERIMENT",
+                "operatorAttestationId":"creator-explicit-next-question",
+                "rationale":"Try a different image in the first authored shot.",
+                "nextQuestion":"What if the opening shot used the other image instead?",
+                "acknowledgedTrialOnly":True,
+            })
+            self.assertTrue(another["nextQuestion"])
+            suggestions=nxt.question_set(next_bench,plan,cards,obs,audio,root)
+            self.assertEqual(len(suggestions["proposals"]),3)
+            self.assertTrue(all(x["status"]=="proposal-only"
+                                for x in suggestions["proposals"]))
+            self.assertEqual(suggestions["humanQuestionVerbatim"],
+                             another["nextQuestion"])
+            self.assertFalse(suggestions["automaticExecution"])
+            proposals_path=iq.write_once(root/"next-questions",
+                                         suggestions,"questionSetSha256")
+            self.assertTrue(Path(proposals_path).is_file())
+            swap=next(x for x in suggestions["proposals"]
+                      if x["kind"]=="SWAP_CARD")
+            shot_id=swap["eligibleShotIds"][0]
+            replacement=swap["eligibleReplacementAssetIdsByShot"][shot_id][0]
+            second_act={
+                "schema":nxt.AUTH,
+                "questionSetSha256":suggestions["questionSetSha256"],
+                "proposalSha256":swap["proposalSha256"],
+                "operatorAttestationId":"creator-selected-first-card-replacement",
+                "decision":"RENDER_ONE_LOCAL_TRIAL",
+                "shotId":shot_id,
+                "replacementAssetId":replacement,
+                "newFocus":None,
+                "newLensId":None,
+                "allowLocalExecution":True,
+                "allowPaidProviders":False,
+                "allowNetworkUpload":False,
+            }
+            original_card_hash=iq.digest(cards)
+            sourceA=donors.sha_file(vidmage_movie)
+            sourceB=donors.sha_file(remotion_movie)
+            revision,revision_path=nxt.run_trial(
+                next_bench,suggestions,second_act,plan,cards,obs,audio,root,
+                root/"revised-shot.mp4")
+            self.assertTrue(Path(revision_path).is_file())
+            self.assertEqual(revision["experimentKind"],"SWAP_CARD")
+            self.assertTrue(revision["newMediaDifferentFromPriorVidmage"])
+            self.assertEqual(revision["humanQuestionVerbatim"],another["nextQuestion"])
+            self.assertFalse(revision["humanKeep"])
+            self.assertFalse(revision["publish"])
+            self.assertEqual(donors.sha_file(vidmage_movie),sourceA)
+            self.assertEqual(donors.sha_file(remotion_movie),sourceB)
+            self.assertEqual(iq.digest(cards),original_card_hash)
+            reopened=nxt.reopen_revision(revision_path)
+            self.assertEqual(reopened["status"],"verified-editable-snapshot")
+            self.assertEqual(reopened["movieSha256"],revision["newMovieSha256"])
+            self.assertEqual(reopened["editorCards"]["shots"][0]["assetId"],replacement)
+            self.assertEqual(reopened["paperPlan"],plan)
+            self.assertEqual(reopened["toasterObservation"],obs)
+            with self.assertRaisesRegex(ValueError,"create-only"):
+                nxt.run_trial(next_bench,suggestions,second_act,
+                              plan,cards,obs,audio,root,root/"revised-shot.mp4")
+            forged=dict(second_act,allowPaidProviders=True)
+            with self.assertRaisesRegex(ValueError,"authorization"):
+                nxt.run_trial(next_bench,suggestions,forged,
+                              plan,cards,obs,audio,root,root/"forged.mp4")
+            forged=dict(second_act,replacementAssetId=cards["shots"][0]["assetId"])
+            with self.assertRaisesRegex(ValueError,"independently authorized"):
+                nxt.run_trial(next_bench,suggestions,forged,
+                              plan,cards,obs,audio,root,root/"unchanged.mp4")
+            forged_q=dict(suggestions,humanQuestionVerbatim="AI invented new question")
+            with self.assertRaisesRegex(ValueError,"question or source"):
+                nxt.run_trial(next_bench,forged_q,second_act,
+                              plan,cards,obs,audio,root,root/"tampered-question.mp4")
+            # One next-question trial does not rewrite the first review
+            # or turn the original 004 KEEP B into a disposable artifact.
+            self.assertEqual(human_bench.get_decision(),chosen)
+            self.assertEqual(next_bench.get_decision(),another)
+
             # Proof of non-interchangeable receipts; no silent same-song or
             # silent selection substitution.
             with self.assertRaisesRegex(ValueError,"source material"):
