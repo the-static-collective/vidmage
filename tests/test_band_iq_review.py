@@ -158,7 +158,9 @@ class ReviewLocalTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"media source changed"):
             self.bench.commit(form())
         file.write_bytes(file.read_bytes()[:-1])
-        # Integrity check at commit still rehashes the actual source.
+        # Starting a new session deliberately revalidates actual media bytes,
+        # rather than silently re-accepting a changed stat fingerprint.
+        self.bench=review.ReviewBench(**self.params)
         self.assertTrue(self.bench.commit(form())["reviewSha256"])
         stored=json.loads(self.bench.decision_path.read_text())
         stored["decision"]="KEEP_PLAYDECK"
