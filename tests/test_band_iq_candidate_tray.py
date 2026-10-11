@@ -124,7 +124,7 @@ class SourceFragmentTests(unittest.TestCase):
         for patch in candidates:
             with self.subTest(patch=patch),self.assertRaises(ValueError):
                 cross.checked_bit({**self.bit,**patch},self.original["assets"])
-        with self.assertRaisesRegex(ValueError,"only a human authored"):
+        with self.assertRaisesRegex(ValueError,"human local arrangement"):
             # The sealed author still requires the normal explicit seal contract.
             story.author({**self.form,"decision":"RENDER_NOW"},
                          self.paper,self.demo.plan,self.original,self.root)
