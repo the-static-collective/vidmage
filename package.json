@@ -23,6 +23,8 @@
     "band-iq:lab-proof": "python3 -m unittest -v tests/test_band_iq_question_lab.py",
     "band-iq:lab-help": "python3 -m bridge.band_iq_question_lab --help",
     "band-iq:ac-proof": "python3 -m unittest -v tests/test_band_iq_ac_review.py",
-    "band-iq:ac-room": "python3 -m bridge.band_iq_ac_review --help"
+    "band-iq:ac-room": "python3 -m bridge.band_iq_ac_review --help",
+    "band-iq:workbench-proof": "python3 -m unittest -v tests/test_band_iq_workbench.py",
+    "band-iq:workbench": "python3 -m bridge.band_iq_workbench --help"
   }
 }
