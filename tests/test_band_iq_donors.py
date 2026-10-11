@@ -57,8 +57,8 @@ class NativeDoorTest(unittest.TestCase):
             plan={"schema":zero_dollar_mill.PLAN_SCHEMA,"id":"synthetic-plan-001",
                   "targetSeconds":8.0,
                   "slugs":[
-                    {"id":"slug-1","durationSeconds":4,"sourceSha256":"f"*64,"recipe":"fit"},
-                    {"id":"slug-2","durationSeconds":4,"sourceSha256":"e"*64,"recipe":"fit"},
+                    {"id":"slug-1","sourceAssetId":"synthetic-a","durationSeconds":4,"sourceSha256":"f"*64,"recipe":"fit"},
+                    {"id":"slug-2","sourceAssetId":"synthetic-b","durationSeconds":4,"sourceSha256":"e"*64,"recipe":"fit"},
                   ]}
             source_plan=tmp/"plan.json"
             source_plan.write_text(json.dumps(plan))
