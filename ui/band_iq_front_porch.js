@@ -4,6 +4,7 @@
   let state=null,working=false;
   let storyDraft=null,activeShot=0;
   let contactShot=-1,contactDraft=null,contactEvidence=null;
+  let trayDrafts=[],grabbedBit=null,candidateEvidence=null,candidateNumber=0;
   const lensNames={
     landscape:"Wide & wandering",
     architecture:"Rooms & corridors",
@@ -15,7 +16,7 @@
   function message(text){$("feedback").textContent=String(text);}
   function setBusy(active){
     working=active;
-    for(const id of ["song","photos","accept","prepare","make","story-seal","make-filmstrip","contact-compare","contact-apply"])$(id).disabled=active;
+    for(const id of ["song","photos","accept","prepare","make","story-seal","make-filmstrip","contact-compare","contact-apply","candidate-save","candidate-apply","bit-cross","bit-grab"])$(id).disabled=active;
   }
   async function request(route,body,options={}){
     const headers={"X-Porch-Token":state.token};
@@ -82,11 +83,14 @@
   }
   function currentShotChoice(){
     const shot=storyDraft?.[activeShot];
-    return shot?{
+    if(!shot)return null;
+    const result={
       sourceAssetId:shot.sourceAssetId,
       focus:shot.focus.slice(),
       protectText:shot.protectText,
-    }:null;
+    };
+    if(shot.crossBit)result.crossBit=JSON.parse(JSON.stringify(shot.crossBit));
+    return result;
   }
   function sourceOptionList(){
     const table=state?.storytable;
@@ -119,6 +123,7 @@
         sourceAssetId:left.sourceAssetId,
         focus:left.focus.slice(),
         protectText:left.protectText,
+        ...(left.crossBit?{crossBit:JSON.parse(JSON.stringify(left.crossBit))}:{}),
       };
       sourceOptionList();
       $("contact-image").value=contactDraft.sourceAssetId;
@@ -144,6 +149,7 @@
       focus:[Number($("contact-x").value)/100,
              Number($("contact-y").value)/100],
       protectText:$("contact-protect").checked,
+      ...(contactDraft.crossBit?{crossBit:JSON.parse(JSON.stringify(contactDraft.crossBit))}:{}),
     };
     $("contact-x-value").textContent=Math.round(contactDraft.focus[0]*100)+"%";
     $("contact-y-value").textContent=Math.round(contactDraft.focus[1]*100)+"%";
@@ -222,6 +228,7 @@
         shotId:x.shotId,start:x.start,end:x.end,
         sourceAssetId:x.sourceAssetId,
         focus:x.focus.slice(),protectText:x.protectText,
+        ...(x.crossBit?{crossBit:JSON.parse(JSON.stringify(x.crossBit))}:{}),
       }));
     }
     $("story-audio").src="/api/porch/story/audio";
@@ -258,6 +265,204 @@
       $("story-sha").textContent="Storytable receipt SHA-256 "+table.storySha256;
     }
     drawFilmstrip();
+    drawTray();
+  }
+
+  function cloneShotList(items){
+    return JSON.parse(JSON.stringify(items.map(row=>({
+      shotId:row.shotId,sourceAssetId:row.sourceAssetId,
+      focus:row.focus,protectText:row.protectText,
+      ...(row.crossBit?{crossBit:row.crossBit}:{}),
+    }))));
+  }
+  function clearCandidatePreview(reason){
+    candidateEvidence=null;
+    $("candidate-comparison").hidden=true;
+    if(reason)$("candidate-status").textContent=reason;
+  }
+  function syncBitSourceOptions(){
+    const chosen=$("bit-source").value;
+    $("bit-source").replaceChildren();
+    (state?.storytable?.images||[]).forEach((entry,i)=>{
+      const option=document.createElement("option");
+      option.value=entry.assetId;
+      option.textContent="Owned picture "+String(i+1).padStart(2,"0");
+      $("bit-source").append(option);
+    });
+    if(chosen&&state.storytable.images.some(x=>x.assetId===chosen)){
+      $("bit-source").value=chosen;
+    }
+  }
+  function bitRectangle(prefix){
+    const size=Number($(prefix+"-size").value)/100;
+    const x=Math.min(Number($(prefix+"-x").value)/100,1-size);
+    const y=Math.min(Number($(prefix+"-y").value)/100,1-size);
+    return [Number(x.toFixed(3)),Number(y.toFixed(3)),
+            Number(size.toFixed(3)),Number(size.toFixed(3))];
+  }
+  function drawBitGuide(id,assetId,rect,legend){
+    const canvas=$(id);
+    if(!canvas||!state?.storytable)return;
+    const imageRef=state.storytable.images.find(x=>x.assetId===assetId);
+    if(!imageRef)return;
+    const context=canvas.getContext("2d");
+    const img=new Image();
+    img.onload=()=>{
+      if(state?.storytable?.sealed)return;
+      context.clearRect(0,0,320,180);
+      context.drawImage(img,0,0,320,180);
+      context.fillStyle="rgba(8,21,14,.37)";
+      context.fillRect(0,0,320,180);
+      const [x,y,w,h]=rect;
+      context.drawImage(img,x*320,y*180,w*320,h*180,
+                        x*320,y*180,w*320,h*180);
+      context.lineWidth=3;
+      context.strokeStyle="#e9d391";
+      context.strokeRect(x*320+1,y*180+1,w*320-2,h*180-2);
+      context.font="bold 12px ui-monospace,monospace";
+      context.fillStyle="#fff1c7";
+      context.fillText(legend,10,18);
+    };
+    img.src=imageRef.url;
+  }
+  function refreshBitGuides(){
+    if(!state?.storytable||state.storytable.sealed)return;
+    for(const id of ["bit-grab-x","bit-grab-y","bit-grab-size",
+                     "bit-cross-x","bit-cross-y","bit-cross-size","bit-opacity"]){
+      $(id+"-out").textContent=$(id).value+"%";
+    }
+    drawBitGuide("bit-grab-guide",$("bit-source").value,
+                 bitRectangle("bit-grab"),"GRAB / OWNED SOURCE");
+    const current=storyDraft?.[activeShot];
+    if(current)drawBitGuide("bit-cross-guide",current.sourceAssetId,
+                  bitRectangle("bit-cross"),"CROSS / TARGET SHOT");
+  }
+  function drawTray(){
+    const table=state?.storytable;
+    $("candidate-tray").hidden=!table||table.sealed;
+    if(!table||table.sealed){
+      trayDrafts=[];grabbedBit=null;candidateEvidence=null;return;
+    }
+    syncBitSourceOptions();
+    refreshBitGuides();
+    $("candidate-collection").replaceChildren();
+    if(!trayDrafts.length){
+      const notice=document.createElement("p");
+      notice.className="candidate-empty";
+      notice.textContent="No alternate arrangements pinned yet. You can keep up to four independent drafts in this local tray.";
+      $("candidate-collection").append(notice);
+    }
+    trayDrafts.forEach((item,i)=>{
+      const card=document.createElement("article");
+      card.className="candidate-pinned";
+      const name=document.createElement("strong");
+      name.textContent=item.title;
+      const metadata=document.createElement("small");
+      const diff=item.shots.filter((shot,j)=>
+        JSON.stringify(shot)!==JSON.stringify(cloneShotList(storyDraft)[j])).length;
+      metadata.textContent=diff+" shot(s) differ from current draft · "+
+        item.shots.filter(s=>s.crossBit).length+" grabbed/crossed bit(s)";
+      const actions=document.createElement("div");
+      actions.className="candidate-buttons";
+      const compare=document.createElement("button");
+      compare.type="button";compare.className="story-navigate";
+      compare.textContent="Compare this arrangement ↔";
+      compare.disabled=diff===0||working;
+      compare.addEventListener("click",()=>comparePinnedCandidate(item));
+      const remove=document.createElement("button");
+      remove.type="button";remove.className="candidate-remove";
+      remove.textContent="Unpin";
+      remove.addEventListener("click",()=>{
+        trayDrafts.splice(i,1);
+        clearCandidatePreview("The unsealed alternative was discarded. Your draft is unchanged.");
+        drawTray();
+      });
+      actions.append(compare,remove);
+      card.append(name,metadata,actions);
+      $("candidate-collection").append(card);
+    });
+    $("candidate-save").disabled=trayDrafts.length>=4||working;
+  }
+  function touchDraft(reason){
+    clearCandidatePreview(reason);
+    if(!state?.storytable?.sealed)drawTray();
+  }
+  async function comparePinnedCandidate(entry){
+    if(working||!state?.paper||state.storytable?.sealed)return;
+    const old=cloneShotList(storyDraft);
+    const alt=cloneShotList(entry.shots);
+    const changed=alt.some((row,i)=>JSON.stringify(row)!==JSON.stringify(old[i]));
+    if(!changed){
+      $("candidate-status").textContent="This candidate is identical to the working draft.";
+      return;
+    }
+    const payload={
+      paperTraySha256:state.paper.paperTraySha256,
+      baseShots:old,candidateShots:alt,
+      compareOnly:true,allowStorySeal:false,allowMovieRender:false,
+      allowPublication:false,allowNetworkUpload:false,allowPaidProviders:false,
+    };
+    setBusy(true);
+    clearCandidatePreview("Rendering bounded actual pixels for the changed song windows…");
+    try{
+      const answer=await request("/api/porch/candidate/compare",payload);
+      const receipt=answer.receipt;
+      if(receipt.schema!=="vidmage/band-iq-013-temporary-candidate-tray/v1"||
+         receipt.totalChangedShotCount<1||
+         receipt.baseDraftSha256===receipt.candidateDraftSha256){
+        throw Error("Actual candidate versions did not verify.");
+      }
+      candidateEvidence={
+        receipt,old,alt,title:entry.title,
+        oldJson:JSON.stringify(old),altJson:JSON.stringify(alt),
+      };
+      $("candidate-comparison-grid").replaceChildren();
+      receipt.nativeComparisons.forEach((one,index)=>{
+        const card=document.createElement("div");
+        card.className="candidate-pair";
+        const title=document.createElement("strong");
+        title.textContent="SHOT "+String(one.shotIndex+1).padStart(2,"0")+
+          " · "+one.shotId;
+        const pair=document.createElement("div");
+        pair.className="candidate-pair-frames";
+        for(const side of ["left","right"]){
+          const panel=document.createElement("div");
+          const label=document.createElement("small");
+          label.textContent=side==="left"?"CURRENT DRAFT":"PINNED ALTERNATIVE";
+          panel.append(label);
+          const photos=document.createElement("div");
+          photos.className="candidate-three";
+          one[side].frames.forEach((frame,frameIndex)=>{
+            const button=document.createElement("button");
+            button.type="button";
+            const img=document.createElement("img");
+            img.src="/api/porch/candidate/frame/"+receipt.candidateSha256+
+              "/"+index+"/"+side+"/"+frameIndex;
+            img.alt=side+" authored real frame at "+frame.atSeconds.toFixed(2)+"s";
+            button.append(img);
+            button.addEventListener("click",()=>{
+              selectShot(one.shotIndex);
+              try{$("story-audio").currentTime=frame.atSeconds;}catch{}
+            });
+            photos.append(button);
+          });
+          panel.append(photos);pair.append(panel);
+        }
+        card.append(title,pair);
+        $("candidate-comparison-grid").append(card);
+      });
+      $("candidate-coverage").textContent=
+        "Compared "+receipt.observedShotCount+" of "+
+        receipt.totalChangedShotCount+" changed native song windows. "+
+        (receipt.omittedChangesUnjudged?
+          "Remaining changed windows have not been measured or judged.":"All changed windows sampled.")+
+        " No native movie has been made.";
+      $("candidate-comparison").hidden=false;
+      $("candidate-status").textContent=
+        "Both variants are still candidates. Apply the whole pinned arrangement only if you choose.";
+    }catch(e){
+      clearCandidatePreview(e.message||"Cannot compare these exact candidate sources.");
+    }finally{setBusy(false);drawTray();}
   }
 
   function drawFilmstrip(){
@@ -473,6 +678,7 @@
            sourceAssetId:compared.left.sourceAssetId,
            focus:compared.left.focus,
            protectText:compared.left.protectText,
+           ...(compared.left.crossBit?{crossBit:compared.left.crossBit}:{}),
          })){
         throw Error("Comparison did not belong to the exact original draft.");
       }
@@ -506,6 +712,7 @@
       sourceAssetId:idea.right.sourceAssetId,
       focus:idea.right.focus.slice(),
       protectText:idea.right.protectText,
+      ...(idea.right.crossBit?{crossBit:JSON.parse(JSON.stringify(idea.right.crossBit))}:{}),
     };
     invalidateContact("Alternative applied to this on-screen draft only. Storytable still unsealed.");
     selectShot(activeShot);
@@ -542,6 +749,7 @@
       shots:storyDraft.map(x=>({
         shotId:x.shotId,sourceAssetId:x.sourceAssetId,
         focus:x.focus.slice(),protectText:x.protectText,
+        ...(x.crossBit?{crossBit:JSON.parse(JSON.stringify(x.crossBit))}:{}),
       })),
       preserveOriginals:true,publish:false,
       allowPaidProviders:false,allowNetworkUpload:false,
