@@ -3,6 +3,7 @@
   const $=id=>document.getElementById(id);
   let state=null,working=false;
   let storyDraft=null,activeShot=0;
+  let contactShot=-1,contactDraft=null,contactEvidence=null;
   const lensNames={
     landscape:"Wide & wandering",
     architecture:"Rooms & corridors",
@@ -14,7 +15,7 @@
   function message(text){$("feedback").textContent=String(text);}
   function setBusy(active){
     working=active;
-    for(const id of ["song","photos","accept","prepare","make","story-seal","make-filmstrip"])$(id).disabled=active;
+    for(const id of ["song","photos","accept","prepare","make","story-seal","make-filmstrip","contact-compare","contact-apply"])$(id).disabled=active;
   }
   async function request(route,body,options={}){
     const headers={"X-Porch-Token":state.token};
@@ -79,6 +80,99 @@
     return "SHOT "+String(i+1).padStart(2,"0")+" · "+
       shot.start.toFixed(1)+"–"+shot.end.toFixed(1)+" s";
   }
+  function currentShotChoice(){
+    const shot=storyDraft?.[activeShot];
+    return shot?{
+      sourceAssetId:shot.sourceAssetId,
+      focus:shot.focus.slice(),
+      protectText:shot.protectText,
+    }:null;
+  }
+  function sourceOptionList(){
+    const table=state?.storytable;
+    $("contact-image").replaceChildren();
+    (table?.images||[]).forEach((source,i)=>{
+      const option=document.createElement("option");
+      option.value=source.assetId;
+      option.textContent="Owned picture "+String(i+1).padStart(2,"0");
+      $("contact-image").append(option);
+    });
+  }
+  function invalidateContact(reason){
+    contactEvidence=null;
+    $("contact-result").hidden=true;
+    $("contact-status").textContent=reason||
+      "This is still just a possible shot. Nothing has been applied or sealed.";
+  }
+  function syncContactForShot(){
+    const table=state?.storytable;
+    $("contact-sheet").hidden=!table||table.sealed;
+    if(!table||table.sealed){
+      contactEvidence=null;
+      return;
+    }
+    const left=currentShotChoice();
+    if(!left)return;
+    if(contactShot!==activeShot||!contactDraft){
+      contactShot=activeShot;
+      contactDraft={
+        sourceAssetId:left.sourceAssetId,
+        focus:left.focus.slice(),
+        protectText:left.protectText,
+      };
+      sourceOptionList();
+      $("contact-image").value=contactDraft.sourceAssetId;
+      $("contact-x").value=Math.round(contactDraft.focus[0]*100);
+      $("contact-y").value=Math.round(contactDraft.focus[1]*100);
+      $("contact-protect").checked=contactDraft.protectText;
+      invalidateContact("Choose a new image or focus to compare with this song moment.");
+    }else if(contactEvidence &&
+      JSON.stringify(contactEvidence.left)!==JSON.stringify(left)){
+      invalidateContact("The current draft changed. Compare again to see the new pixels.");
+    }
+    $("contact-current-label").textContent=
+      "Shot "+(activeShot+1)+" · owned picture "+
+      String((table.images.findIndex(x=>x.assetId===left.sourceAssetId)+1)).padStart(2,"0")+
+      " · focus "+Math.round(left.focus[0]*100)+"% / "+
+      Math.round(left.focus[1]*100)+"%"+
+      (left.protectText?" · writing protected":"");
+  }
+  function contactControlsChanged(){
+    if(!contactDraft||state?.storytable?.sealed)return;
+    contactDraft={
+      sourceAssetId:$("contact-image").value,
+      focus:[Number($("contact-x").value)/100,
+             Number($("contact-y").value)/100],
+      protectText:$("contact-protect").checked,
+    };
+    $("contact-x-value").textContent=Math.round(contactDraft.focus[0]*100)+"%";
+    $("contact-y-value").textContent=Math.round(contactDraft.focus[1]*100)+"%";
+    invalidateContact("Alternative changed. Compare again before applying.");
+  }
+  function drawContactFrames(receipt,side,target){
+    $(target).replaceChildren();
+    receipt[side].frames.forEach((sample,j)=>{
+      const button=document.createElement("button");
+      button.type="button";
+      button.className="contact-frame";
+      button.setAttribute("aria-label",
+        "Listen at "+sample.atSeconds.toFixed(2)+" seconds, "+
+        (side==="left"?"current shot":"alternative")+" frame "+(j+1));
+      const picture=document.createElement("img");
+      picture.src="/api/porch/contact/frame/"+receipt.comparisonSha256+
+        "/"+side+"/"+j;
+      picture.alt=(side==="left"?"Current":"Alternative")+
+        " actual sourced VidMage frame at "+sample.atSeconds.toFixed(2)+" seconds";
+      const stamp=document.createElement("small");
+      stamp.textContent=sample.atSeconds.toFixed(2)+"s";
+      button.append(picture,stamp);
+      button.addEventListener("click",()=>{
+        try{$("story-audio").currentTime=sample.atSeconds;}catch{}
+      });
+      $(target).append(button);
+    });
+  }
+
   function selectShot(index){
     const shots=storyShots(),table=state?.storytable;
     if(!table||!shots.length)return;
@@ -118,6 +212,7 @@
     });
     $("story-previous").disabled=activeShot===0;
     $("story-next").disabled=activeShot===shots.length-1;
+    syncContactForShot();
   }
   function drawStorytable(){
     const table=state?.storytable;
@@ -351,6 +446,73 @@
     $("story-protect").checked=shot.protectText;
     selectShot(activeShot);
   }
+  $("contact-image").addEventListener("change",contactControlsChanged);
+  $("contact-x").addEventListener("input",contactControlsChanged);
+  $("contact-y").addEventListener("input",contactControlsChanged);
+  $("contact-protect").addEventListener("change",contactControlsChanged);
+  $("contact-compare").addEventListener("click",async()=>{
+    if(working||!storyDraft||state.storytable?.sealed||!contactDraft)return;
+    const selected=storyDraft[activeShot];
+    const left=currentShotChoice();
+    const right={...contactDraft,focus:contactDraft.focus.slice()};
+    const body={
+      paperTraySha256:state.paper.paperTraySha256,
+      shotId:selected.shotId,left,right,
+      compareOnly:true,allowStorySeal:false,allowMovieRender:false,
+      allowNetworkUpload:false,allowPaidProviders:false,allowPublication:false,
+    };
+    setBusy(true);
+    $("contact-status").textContent=
+      "Sampling the same exact song window with your two source and framing choices…";
+    try{
+      const result=await request("/api/porch/contact/compare",body);
+      const compared=result.receipt;
+      if(compared.schema!=="vidmage/band-iq-012-ephemeral-contact-sheet/v1"||
+         compared.shotId!==selected.shotId||
+         JSON.stringify(left)!==JSON.stringify({
+           sourceAssetId:compared.left.sourceAssetId,
+           focus:compared.left.focus,
+           protectText:compared.left.protectText,
+         })){
+        throw Error("Comparison did not belong to the exact original draft.");
+      }
+      contactEvidence={receipt:compared,left,right,shotId:selected.shotId};
+      drawContactFrames(compared,"left","contact-left-frames");
+      drawContactFrames(compared,"right","contact-right-frames");
+      $("contact-digest").textContent=
+        "Temporary local comparison SHA-256 "+compared.comparisonSha256+
+        " · no files or story receipts written";
+      $("contact-result").hidden=false;
+      $("contact-status").textContent=
+        "Two real samples, neither selected. Apply THAT, or leave this draft untouched.";
+    }catch(error){invalidateContact(error.message||"Comparison could not be generated.");}
+    finally{setBusy(false);}
+  });
+  $("contact-apply").addEventListener("click",()=>{
+    const idea=contactEvidence;
+    if(!idea||state?.storytable?.sealed||!storyDraft||
+       storyDraft[activeShot].shotId!==idea.shotId||
+       JSON.stringify(currentShotChoice())!==JSON.stringify(idea.left)||
+       JSON.stringify(contactDraft)!==JSON.stringify(idea.right)){
+      invalidateContact("This comparison is no longer current. Compare again.");
+      return;
+    }
+    if(!window.confirm(
+      "Apply the alternative image/framing to this UNSEALED draft only? "+
+      "The saved original, source plan, and any sealed film remain untouched. "+
+      "You will still need to explicitly seal the complete Storytable later."))return;
+    storyDraft[activeShot]={
+      ...storyDraft[activeShot],
+      sourceAssetId:idea.right.sourceAssetId,
+      focus:idea.right.focus.slice(),
+      protectText:idea.right.protectText,
+    };
+    invalidateContact("Alternative applied to this on-screen draft only. Storytable still unsealed.");
+    selectShot(activeShot);
+  });
+  $("contact-leave").addEventListener("click",()=>{
+    invalidateContact("Your original on-screen draft is unchanged. No comparison was applied.");
+  });
   $("story-focus-x").addEventListener("input",changeFocus);
   $("story-focus-y").addEventListener("input",changeFocus);
   $("story-protect").addEventListener("change",()=>{
