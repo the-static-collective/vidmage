@@ -302,12 +302,11 @@
         const label=document.createElement("div");
         label.textContent=item.start.toFixed(1)+"–"+item.end.toFixed(1)+"s · "+
           (item.operatorEditOverlapsThisWindow?"Selected edit overlaps":"Outside selected edit");
-        const rail=document.createElement("div");
+        const rail=document.createElement("progress");
         rail.className="lab-rail";
-        const bar=document.createElement("div");
-        bar.className="lab-difference";
-        bar.style.width=Math.min(100,item.pixelMeanAbsoluteDifference*100)+"%";
-        rail.appendChild(bar);
+        rail.max=1;
+        rail.value=Math.min(1,item.pixelMeanAbsoluteDifference);
+        rail.setAttribute("aria-label","Measured average pixel difference");
         const caption=document.createElement("small");
         caption.textContent=(item.pixelMeanAbsoluteDifference*100).toFixed(2)+
           "% pixel difference · "+(item.changedFrameFractionAt2PctMAE*100).toFixed(0)+
