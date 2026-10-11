@@ -224,6 +224,33 @@ class PorchNativeTests(unittest.TestCase):
             self.assertEqual(project.state()["stage"],"paper-tray")
             self.assertTrue((project.tray/"scene-cards.json").is_file())
             self.assertEqual(prepared["intakeSha256"],consent["intakeSha256"])
+            from bridge import band_iq_storytable as story
+            paper_plan=json.loads((project.tray/"paper-plan.json").read_text())
+            provisional=json.loads((project.tray/"scene-cards.json").read_text())
+            images=sorted(provisional["assets"])
+            assignments=[{
+                "shotId":r["id"],
+                "sourceAssetId":images[(i+1)%len(images)],
+                "focus":[.25,.75] if i==0 else [.7,.3],
+                "protectText":i==0,
+            } for i,r in enumerate(paper_plan["shots"])]
+            story_form={
+                "paperTraySha256":prepared["paperTraySha256"],
+                "operatorAttestationId":"actual-story-director-before-first-cut",
+                "decision":"SEAL_STORYTABLE","shots":assignments,
+                "preserveOriginals":True,"publish":False,
+                "allowPaidProviders":False,"allowNetworkUpload":False,
+            }
+            with self.assertRaisesRegex(ValueError,"separate sealed human Storytable"):
+                project.make({**first_authorization(prepared),"storySha256":"0"*64})
+            # The actual native source rows will change BEFORE the first film.
+            sealed=project.seal_story(story_form)
+            self.assertTrue(iq.sha(sealed["storySha256"]))
+            self.assertEqual(project.verify_story()[0],sealed)
+            authored=project.verify_story()[1]
+            self.assertNotEqual(authored,provisional)
+            self.assertTrue(authored["assets"]["shot-asset-0001"]["mode"]=="protect-text")
+            self.assertEqual(authored["assets"]["shot-asset-0001"]["focus"],[.25,.75])
             for invalid in [
                 {**first_authorization(prepared),"allowPublicRelease":True},
                 {**first_authorization(prepared),"paperTraySha256":"0"*64},
@@ -240,7 +267,8 @@ class PorchNativeTests(unittest.TestCase):
                 base=f"http://127.0.0.1:{server.server_port}"
                 with urlopen(base+"/api/porch/state") as response:
                     state=json.load(response)
-                decision=first_authorization(prepared)
+                decision={**first_authorization(prepared),
+                          "storySha256":sealed["storySha256"]}
                 request=Request(base+"/api/porch/make",
                                 data=json.dumps(decision).encode(),headers={
                       "Origin":base,"X-Porch-Token":state["token"],
@@ -252,6 +280,10 @@ class PorchNativeTests(unittest.TestCase):
                                  "two-real-films-await-human-review")
                 self.assertFalse(output["receipt"]["published"])
                 self.assertFalse(output["receipt"]["selectedForKeep"])
+                self.assertEqual(output["receipt"]["sourceStorySha256"],sealed["storySha256"])
+                self.assertEqual(output["receipt"]["authoredCardsSha256"],sealed["authoredCardsSha256"])
+                self.assertEqual(project.workbench.profile["nextSources"]["cards"],
+                                 str(project.story_cards_path))
                 self.assertTrue(project.profile_path.is_file())
                 self.assertEqual(project.profile_path.stat().st_mode & 0o777,0o600)
                 self.assertEqual(donors.sha_file(project._uploads()[0]),old_sha)
