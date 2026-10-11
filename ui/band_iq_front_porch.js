@@ -316,7 +316,8 @@
       context.fillStyle="rgba(8,21,14,.37)";
       context.fillRect(0,0,320,180);
       const [x,y,w,h]=rect;
-      context.drawImage(img,x*320,y*180,w*320,h*180,
+      context.drawImage(img,x*img.naturalWidth,y*img.naturalHeight,
+                        w*img.naturalWidth,h*img.naturalHeight,
                         x*320,y*180,w*320,h*180);
       context.lineWidth=3;
       context.strokeStyle="#e9d391";
@@ -748,7 +749,8 @@
       "No source image, signed story or published film will be altered. "+
       "The Storytable must still be sealed separately."))return;
     storyDraft=storyDraft.map((row,i)=>({
-      ...row,...JSON.parse(JSON.stringify(candidate.alt[i])),
+      shotId:row.shotId,start:row.start,end:row.end,
+      ...JSON.parse(JSON.stringify(candidate.alt[i])),
     }));
     clearCandidatePreview("This candidate entered the draft. Nothing was sealed.");
     contactShot=-1;
