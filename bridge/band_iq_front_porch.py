@@ -29,6 +29,7 @@ from . import scene_card_film as film
 from . import band_iq_storytable as story
 from . import band_iq_living_filmstrip as strip
 from . import band_iq_contact_sheet as contact
+from . import band_iq_candidate_tray as cross
 
 PORCH="vidmage/band-iq-009-owned-intake/v1"
 PREPARED="vidmage/band-iq-009-paper-tray/v1"
@@ -155,6 +156,7 @@ class FrontPorch:
         # A/B source candidate pixels exist only in this process, never as
         # an immutable story receipt or owner-media file.
         self.contact_sheet=None
+        self.candidate_sheet=None
         self.lock=threading.RLock()
         self.blender_root=Path(blender_root).expanduser().resolve()
         self.toaster_root=Path(toaster_root).expanduser().resolve()
@@ -400,6 +402,89 @@ class FrontPorch:
             receipt,images=self.contact_sheet
             return contact.verified_image(receipt,images,sha,side,frame)
 
+    def compare_story_candidates(self,form):
+        with self.lock:
+            need(not self.story_path.exists() and not self.profile_path.exists(),
+                 "candidate comparisons require an unsealed Storytable")
+            paper=self.verify_tray()
+            plan=read(self.tray/"paper-plan.json")
+            prepared=read(self.tray/"scene-cards.json")
+            need(type(form)==dict and set(form)=={
+                "paperTraySha256","baseShots","candidateShots","compareOnly",
+                "allowStorySeal","allowMovieRender","allowPublication",
+                "allowNetworkUpload","allowPaidProviders"},
+                "candidate tray requires two explicit bounded scene versions")
+            need(form["paperTraySha256"]==paper["paperTraySha256"] and
+                 form["compareOnly"] is True and form["allowStorySeal"] is False and
+                 form["allowMovieRender"] is False and form["allowPublication"] is False and
+                 form["allowNetworkUpload"] is False and
+                 form["allowPaidProviders"] is False,
+                 "candidate preview has no authoring, movie or release authority")
+            left=cross.validate_draft_shots(form["baseShots"],prepared["assets"])
+            right=cross.validate_draft_shots(form["candidateShots"],prepared["assets"])
+            need(len(left)==len(plan["shots"]) and len(right)==len(plan["shots"]) and
+                 all(a["shotId"]==b["shotId"]==native["id"]
+                     for a,b,native in zip(left,right,plan["shots"])),
+                 "both candidate versions must cover original native shot IDs exactly")
+            changed=[i for i,(a,b) in enumerate(zip(left,right)) if a!=b]
+            need(changed,"two identical stories do not need raster comparison")
+            # This is a BOUNDED preview, never a de-facto full rendered film.
+            indices=changed[:6]
+            all_frames={}
+            observations=[]
+            obs=read(self.tray/"toaster-observation.json")
+            for n,i in enumerate(indices):
+                form_one={
+                    "paperTraySha256":paper["paperTraySha256"],
+                    "shotId":plan["shots"][i]["id"],
+                    "left":{k:v for k,v in left[i].items() if k!="shotId"},
+                    "right":{k:v for k,v in right[i].items() if k!="shotId"},
+                    "compareOnly":True,"allowStorySeal":False,
+                    "allowMovieRender":False,"allowPublication":False,
+                    "allowNetworkUpload":False,"allowPaidProviders":False}
+                result,frame_map=contact.comparison(
+                    form_one,paper,plan,prepared,obs,
+                    self.tray/"song.wav",self.tray)
+                observations.append({
+                    "shotIndex":i,"shotId":plan["shots"][i]["id"],
+                    "contactSha256":result["comparisonSha256"],
+                    "left":result["left"],"right":result["right"]})
+                for (side,frame),payload in frame_map.items():
+                    all_frames[(n,side,frame)]=payload
+            body={
+                "schema":"vidmage/band-iq-013-temporary-candidate-tray/v1",
+                "status":"unsealed-in-memory-multi-shot-comparison",
+                "paperTraySha256":paper["paperTraySha256"],
+                "baseDraftSha256":iq.digest(left),
+                "candidateDraftSha256":iq.digest(right),
+                "totalChangedShotCount":len(changed),
+                "observedShotCount":len(indices),
+                "omittedChangesUnjudged":len(changed)>len(indices),
+                "nativeComparisons":observations,
+                "storySaved":False,"filmRendered":False,"humanKeep":False,
+                "allowPaidProviders":False,"allowPublication":False,
+                "allowNetworkUpload":False}
+            receipt={**body,"candidateSha256":iq.digest(body)}
+            self.candidate_sheet=(receipt,all_frames)
+            return receipt
+
+    def candidate_frame(self,sha,pair,side,sample):
+        with self.lock:
+            need(self.candidate_sheet is not None and
+                 not self.story_path.exists() and not self.profile_path.exists(),
+                 "no current unsealed multi-shot comparison")
+            receipt,frames=self.candidate_sheet
+            need(sha==receipt["candidateSha256"] and
+                 type(pair)==int and 0<=pair<len(receipt["nativeComparisons"]) and
+                 side in ("left","right") and type(sample)==int and 0<=sample<3,
+                 "candidate frame no longer belongs to current source versions")
+            data=frames[(pair,side,sample)]
+            import hashlib
+            need(hashlib.sha256(data).hexdigest()==
+                 receipt["nativeComparisons"][pair][side]["frames"][sample]["imageSha256"],
+                 "candidate source pixels changed in local memory")
+            return data
+
     def seal_story(self,form):
         with self.lock:
             need(not self.story_path.exists() and not self.profile_path.exists(),
@@ -410,6 +495,7 @@ class FrontPorch:
             receipt,cards=story.author(
                 form,paper,plan,original,self.tray,materialize_bits=True)
             self.contact_sheet=None
+            self.candidate_sheet=None
             self.story_dir.mkdir(parents=True,exist_ok=True,mode=0o700)
             write_exclusive(self.story_cards_path,cards)
             write_exclusive(self.story_path,receipt)
@@ -781,6 +867,18 @@ class PorchHandler(workbench.WorkbenchHandler):
             except (ValueError,OSError,KeyError,TypeError):
                 self._error(404,"verified preview still not found")
             return
+        if route.startswith("/api/porch/candidate/frame/"):
+            try:
+                tail=route.removeprefix("/api/porch/candidate/frame/")
+                need(re.fullmatch(r"[0-9a-f]{64}/[0-5]/(?:left|right)/[0-2]",tail),
+                     "only current fixed candidate preview frames are allowed")
+                digest,pair,side,sample=tail.split("/")
+                data=self.porch.candidate_frame(digest,int(pair),side,int(sample))
+                self._headers(200,"image/jpeg",len(data))
+                if self.command!="HEAD":self.wfile.write(data)
+            except (OSError,ValueError,KeyError,TypeError,IndexError):
+                self._error(404,"candidate frame superseded or not authorized")
+            return
         if route.startswith("/api/porch/contact/frame/"):
             try:
                 tail=route.removeprefix("/api/porch/contact/frame/")
@@ -828,7 +926,7 @@ class PorchHandler(workbench.WorkbenchHandler):
         if route not in ("/api/porch/upload","/api/porch/consent",
                          "/api/porch/prepare","/api/porch/story/seal",
                          "/api/porch/filmstrip/make","/api/porch/contact/compare",
-                         "/api/porch/make"):
+                         "/api/porch/candidate/compare","/api/porch/make"):
             if self.porch.workbench is None:
                 return self._error(404,"no other action before the first films")
             self.workbench=self.porch.workbench
@@ -843,7 +941,7 @@ class PorchHandler(workbench.WorkbenchHandler):
             length=int(self.headers.get("Content-Length","0"))
             cap=(AUDIO_BYTES if self.headers.get("X-Porch-Kind")=="audio"
                  else IMAGE_BYTES if self.headers.get("X-Porch-Kind")=="image"
-                 else 75000 if route=="/api/porch/story/seal"
+                 else 75000 if route in ("/api/porch/story/seal","/api/porch/candidate/compare")
                  else 3000)
             need(0<length<=cap,"local file or approval exceeds bounded size")
             content_type=self.headers.get("Content-Type","").split(";")[0].lower()
@@ -869,6 +967,8 @@ class PorchHandler(workbench.WorkbenchHandler):
                     outcome=self.porch.preview_filmstrip(form)
                 elif route=="/api/porch/contact/compare":
                     outcome=self.porch.compare_candidates(form)
+                elif route=="/api/porch/candidate/compare":
+                    outcome=self.porch.compare_story_candidates(form)
                 else:outcome=self.porch.make(form)
             return self._json(201,{"ok":True,"receipt":outcome,"state":self.porch.state()})
         except (OSError,ValueError,KeyError,TypeError,subprocess.CalledProcessError,
