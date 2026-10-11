@@ -100,6 +100,47 @@
                 </div>
               </div>
             </div>
+            <section id="contact-sheet" class="contact-sheet" aria-labelledby="contact-title">
+              <div class="receipt-strip">BAND-IQ 012 · THE LITTLE WHAT-IF TABLE</div>
+              <h3 id="contact-title">What if this moment looked another way?</h3>
+              <p>Compare your current shot against an alternative, using actual VidMage raster pixels. It's a scratch comparison—not a saved edit. Nothing in your Storytable changes unless you explicitly apply the idea.</p>
+              <div class="contact-scratch">
+                <div class="contact-current">
+                  <strong>THIS · Your current draft</strong>
+                  <p id="contact-current-label">The current image and framing for this exact song window.</p>
+                </div>
+                <div class="contact-alternative">
+                  <strong>THAT · Another possibility</strong>
+                  <label for="contact-image">Try an owned picture</label>
+                  <select id="contact-image" aria-label="Alternative owned picture for this shot"></select>
+                  <label for="contact-x">Focus across <output id="contact-x-value">50%</output></label>
+                  <input type="range" id="contact-x" min="0" max="100" step="5" value="50"/>
+                  <label for="contact-y">Focus up / down <output id="contact-y-value">50%</output></label>
+                  <input type="range" id="contact-y" min="0" max="100" step="5" value="50"/>
+                  <label class="tick"><input type="checkbox" id="contact-protect"/><span>Protect text and graphics in the alternative.</span></label>
+                </div>
+              </div>
+              <button type="button" class="secondary-comparison" id="contact-compare">Show me both possibilities <span aria-hidden="true">↔</span></button>
+              <div id="contact-result" class="contact-result" hidden>
+                <div class="contact-pair" aria-label="Actual side-by-side local preview of the current and alternative shot">
+                  <div>
+                    <div class="contact-side-heading">THIS <span>the draft, unchanged</span></div>
+                    <div id="contact-left-frames" class="contact-frame-row"></div>
+                  </div>
+                  <div>
+                    <div class="contact-side-heading">THAT <span>the other possibility</span></div>
+                    <div id="contact-right-frames" class="contact-frame-row"></div>
+                  </div>
+                </div>
+                <p class="contact-disclaimer">Same song window. Same native raster engine. Three actual sampled stills for each alternative, before cinematic lens, motion encoding or audio mix. Different doesn't mean better.</p>
+                <div class="contact-choices">
+                  <button type="button" id="contact-apply" class="primary">Apply THAT to my draft <span aria-hidden="true">↗</span></button>
+                  <button type="button" id="contact-leave" class="story-navigate">Leave my draft alone</button>
+                </div>
+                <small id="contact-digest" class="mono"></small>
+              </div>
+              <p id="contact-status" role="status" aria-live="polite" class="contact-status">Neither side has been selected or sealed.</p>
+            </section>
             <div id="story-sealing">
               <label for="story-author">Who arranged this story? <small>A new named creative signature</small></label>
               <input id="story-author" type="text" maxlength="256" autocomplete="off" placeholder="Your name or review ID"/>

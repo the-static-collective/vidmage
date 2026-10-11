@@ -49,6 +49,7 @@ Read the proposed implementation packet:
 - [BAND-IQ 009](docs/BAND_IQ_009.md) — the creator-facing first song and owned-images porch, with explicit local permissions, native Toaster/Blender preparation, independently approved actual VidMage/Playdeck A/B renders and automatic handoff to the living workbench
 - [BAND-IQ 010](docs/BAND_IQ_010.md) — the human Storytable: hear the actual song, assign owned photos to each native shot, choose per-occurrence framing/text protection, then seal the exact source before the first A/B films
 - [BAND-IQ 011](docs/BAND_IQ_011.md) — the Living Filmstrip: source-real, song-timed pre-film raster samples from sealed authored cards, without generating a movie or making a creative selection
+- [BAND-IQ 012](docs/BAND_IQ_012.md) — the Contact Sheet: before sealing the Storytable, compare real current-versus-candidate local raster frames for one song window and explicitly apply the alternate only to the unsealed draft
 
 The pinned upstream SHA list lives in [donors.lock.json](donors.lock.json). Run `npm test` and `npm run verify:donors` (Node 22+) to validate its structure offline. These tests validate metadata shape, **not** upstream feature behavior or user-level filmmaking.
 

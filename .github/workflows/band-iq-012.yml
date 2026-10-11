@@ -1,0 +1,86 @@
+name: VIDMAGE BAND-IQ 012 Ephemeral Contact Sheet
+on:
+  push:
+    branches: [experiment/band-iq-012-contact-sheet]
+  pull_request:
+    paths:
+      - "bridge/band_iq_contact_sheet.py"
+      - "bridge/band_iq_front_porch.py"
+      - "ui/band_iq_front_porch.html"
+      - "ui/band_iq_front_porch.css"
+      - "ui/band_iq_front_porch.js"
+      - "tests/test_band_iq_contact_sheet.py"
+      - "tests/test_band_iq_front_porch.py"
+      - "docs/BAND_IQ_012.md"
+      - ".github/workflows/band-iq-012.yml"
+permissions:
+  contents: read
+jobs:
+  source-real-candidate-pixels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Local photo/raster/audio dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install Pillow==12.1.1 'numpy>=1.26,<3' 'opencv-python-headless>=4.10,<5'
+      - name: Actual temporary before and after pixel comparison and strict source authority
+        run: |
+          python -m unittest -v tests.test_band_iq_contact_sheet
+          python -m unittest -v tests.test_band_iq_storytable tests.test_band_iq_living_filmstrip
+          python -m unittest -v tests.test_band_iq_front_porch.PorchPureTests
+          python -m compileall -q bridge tests
+      - name: Front Porch browser syntax, no remote external assets
+        run: |
+          node --check ui/band_iq_front_porch.js
+          node --check ui/band_iq_workbench.js
+          ! grep -E 'https?://|<script[^>]+src="https?://' ui/band_iq_front_porch.html
+  actual-browser-contact-before-authored-films:
+    needs: source-real-candidate-pixels
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Fetch exactly pinned native contributors
+        run: |
+          git clone --quiet https://github.com/the-static-collective/the-haunted-blender.git donor-blender
+          git -C donor-blender checkout --detach cf0256a49ac8aa879cf2a044847d248177fcfad9
+          test "$(git -C donor-blender rev-parse HEAD)" = cf0256a49ac8aa879cf2a044847d248177fcfad9
+          git clone --quiet https://github.com/the-static-collective/the-haunted-toaster.git donor-toaster
+          git -C donor-toaster checkout --detach 3652c2a96b6b287cda316d1c92daadf7c7417eaf
+          test "$(git -C donor-toaster rev-parse HEAD)" = 3652c2a96b6b287cda316d1c92daadf7c7417eaf
+          git clone --quiet https://github.com/the-static-collective/playdeck.git donor-playdeck
+          git -C donor-playdeck checkout --detach 012186fd67f4c4ef1c6591fc5e29cb559b5a80d0
+          test "$(git -C donor-playdeck rev-parse HEAD)" = 012186fd67f4c4ef1c6591fc5e29cb559b5a80d0
+      - name: Native local media engines
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install Pillow==12.1.1 'numpy>=1.26,<3' 'opencv-python-headless>=4.10,<5'
+          npm --prefix donor-playdeck install --no-audit --no-fund
+      - name: Actual native owned song and pictures, ephemeral contact, human seal, sketch, movies and restart
+        env:
+          VIDMAGE_BLENDER_ROOT: ${{ github.workspace }}/donor-blender
+          VIDMAGE_TOASTER_ROOT: ${{ github.workspace }}/donor-toaster
+          VIDMAGE_PLAYDECK_ROOT: ${{ github.workspace }}/donor-playdeck
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/donor-blender
+        run: |
+          python -m unittest -v tests.test_band_iq_front_porch.PorchNativeTests
+          python -m unittest -v tests.test_band_iq_contact_sheet
+      - name: Never publish private media or source paths in code
+        run: |
+          test ! -d ./private
+          test ! -d ./media

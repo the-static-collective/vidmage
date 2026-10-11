@@ -258,6 +258,71 @@ class PorchNativeTests(unittest.TestCase):
                 self.assertEqual(
                     len(before_story["storytable"]["shots"]),
                     len(paper_plan["shots"]))
+                # 012 human contact sheet: compare two distinct source
+                # possibilities BEFORE sealing the Storytable. The service
+                # must deliver actual pixel JPEGs but never edit a card or
+                # prepare a movie. The same server then seals the story.
+                contact_body={
+                    "paperTraySha256":prepared["paperTraySha256"],
+                    "shotId":paper_plan["shots"][0]["id"],
+                    "left":{"sourceAssetId":images[0],
+                            "focus":[.5,.5],"protectText":False},
+                    "right":{"sourceAssetId":images[1],
+                             "focus":[.25,.75],"protectText":True},
+                    "compareOnly":True,"allowStorySeal":False,
+                    "allowMovieRender":False,"allowNetworkUpload":False,
+                    "allowPaidProviders":False,"allowPublication":False,
+                }
+                blocked_contact=Request(
+                    origin+"/api/porch/contact/compare",
+                    data=json.dumps(contact_body).encode(),headers={
+                        "Origin":"https://stranger.example",
+                        "X-Porch-Token":before_story["token"],
+                        "Content-Type":"application/json"})
+                with self.assertRaises(HTTPError) as outside_contact:
+                    urlopen(blocked_contact)
+                self.assertEqual(outside_contact.exception.code,403)
+                contact_req=Request(
+                    origin+"/api/porch/contact/compare",
+                    data=json.dumps(contact_body).encode(),headers={
+                        "Origin":origin,
+                        "X-Porch-Token":before_story["token"],
+                        "Content-Type":"application/json"})
+                with urlopen(contact_req) as response:
+                    contact_answer=json.load(response)
+                    self.assertEqual(response.status,201)
+                contact_result=contact_answer["receipt"]
+                self.assertFalse(contact_result["sourceDraftModified"])
+                self.assertFalse(contact_result["humanStorySealed"])
+                self.assertFalse(contact_result["movieGenerated"])
+                self.assertFalse(contact_result["published"])
+                self.assertEqual(contact_result["shotId"],contact_body["shotId"])
+                self.assertNotEqual(contact_result["left"]["frames"][1]["imageSha256"],
+                                    contact_result["right"]["frames"][1]["imageSha256"])
+                for side in ("left","right"):
+                    for frame_index in range(3):
+                        image=contact_result[side]["frames"][frame_index]
+                        url=(origin+"/api/porch/contact/frame/"+
+                             contact_result["comparisonSha256"]+
+                             "/"+side+"/"+str(frame_index))
+                        with urlopen(url) as response:
+                            payload=response.read()
+                            self.assertEqual(response.status,200)
+                            self.assertEqual(response.headers["Content-Type"],"image/jpeg")
+                        import hashlib
+                        self.assertEqual(hashlib.sha256(payload).hexdigest(),
+                                         image["imageSha256"])
+                with self.assertRaises(HTTPError) as unknown_contact:
+                    urlopen(origin+"/api/porch/contact/frame/"+
+                            contact_result["comparisonSha256"]+"/right/7")
+                self.assertEqual(unknown_contact.exception.code,404)
+                # The original Paper Director still owns its old JSON
+                # and no contact photos or receipts are persisted anywhere.
+                self.assertEqual(json.loads(
+                    (project.tray/"scene-cards.json").read_text()),provisional)
+                self.assertFalse(project.story_path.exists())
+                self.assertFalse(project.filmstrip_dir.exists())
+                self.assertFalse(list(project.root.rglob("*contact*.jpg")))
                 story_request=Request(
                     origin+"/api/porch/story/seal",
                     data=json.dumps(story_form).encode(),headers={
@@ -278,6 +343,15 @@ class PorchNativeTests(unittest.TestCase):
                     self.assertEqual(response.status,201)
                 sealed=story_answer["receipt"]
                 self.assertTrue(story_answer["state"]["storytable"]["sealed"])
+                # Sealing is a separate crossing; stale unsealed comparison
+                # images are invalidated, never adopted as the saved story.
+                with self.assertRaises(HTTPError) as stale_image:
+                    urlopen(origin+"/api/porch/contact/frame/"+
+                            contact_result["comparisonSha256"]+"/right/0")
+                self.assertEqual(stale_image.exception.code,404)
+                with self.assertRaises(HTTPError) as late_contact:
+                    urlopen(contact_req)
+                self.assertEqual(late_contact.exception.code,409)
                 # Browser song scrub must serve the REAL prepared WAV bytes
                 # and preserve native source identity.
                 wav=(project.tray/"song.wav").read_bytes()
