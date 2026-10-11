@@ -67,6 +67,9 @@ def verify_inputs(bench,plan,cards,observation,audio,asset_root):
          donors.sha_file(audio)==bench.vidmage_record["actualAudioSha256"],
          "original native Toaster audio input changed")
     iq.validate_audio(observation)
+    need(bench.cycle["perceive"]["audioSha256"]==donors.sha_file(audio) and
+         bench.cycle["sourceAudioObservationSha256"]==iq.digest(observation),
+         "native original audio evidence does not match BAND-IQ cycle")
     film.validate(plan,cards,observation,asset_root)
     bound=loop.exact_asset_bindings(cards,asset_root)
     need(bound==bench.selection["assetBindings"]==
@@ -267,7 +270,9 @@ def run_trial(bench, q, choice,plan,cards,observation,audio,asset_root,output):
         "revisedCards":edited,
         "revisedCardsSha256":iq.digest(edited),
         "nativePaperPlanSha256":iq.digest(plan),
+        "nativePaperPlan":copy.deepcopy(plan),
         "nativeToasterObservationSha256":iq.digest(observation),
+        "nativeToasterObservation":copy.deepcopy(observation),
         "actualSourceAudioSha256":donors.sha_file(audio),
         "actualSourceAssetsSha256":loop.exact_asset_bindings(edited,asset_root),
         "originalVidmageMovieSha256":q["sourceVidmageSha256"],
@@ -304,6 +309,8 @@ def reopen_revision(path):
          record["actualSourceAudioSha256"],
          "reopened audio source changed")
     need(record["revisedCardsSha256"]==iq.digest(record["revisedCards"]) and
+         record["nativePaperPlanSha256"]==iq.digest(record["nativePaperPlan"]) and
+         record["nativeToasterObservationSha256"]==iq.digest(record["nativeToasterObservation"]) and
          record["humanKeep"] is False and record["publish"] is False,
          "reopened revision cannot fabricate KEEP or publication")
     return {"schema":"vidmage/band-iq-005-reopen/v1",
@@ -313,6 +320,8 @@ def reopen_revision(path):
             "movieSha256":record["newMovieSha256"],
             "changed":record["changed"],
             "editorCards":record["revisedCards"],
+            "paperPlan":record["nativePaperPlan"],
+            "toasterObservation":record["nativeToasterObservation"],
             "nextAction":"separate human review, revise again, or export only with new authorization"}
 
 def cli():
