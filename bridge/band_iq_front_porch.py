@@ -29,6 +29,7 @@ from . import scene_card_film as film
 from . import band_iq_storytable as story
 from . import band_iq_living_filmstrip as strip
 from . import band_iq_contact_sheet as contact
+from . import band_iq_cross_bits as cross
 
 PORCH="vidmage/band-iq-009-owned-intake/v1"
 PREPARED="vidmage/band-iq-009-paper-tray/v1"
@@ -400,6 +401,19 @@ class FrontPorch:
             receipt,images=self.contact_sheet
             return contact.verified_image(receipt,images,sha,side,frame)
 
+    def compare_crossed_bits(self,form):
+        with self.lock:
+            need(not self.story_path.exists() and not self.profile_path.exists(),
+                 "crossing is only a temporary unsealed candidate")
+            paper=self.verify_tray()
+            receipt,frames=cross.preview(
+                form,paper,read(self.tray/"paper-plan.json"),
+                read(self.tray/"scene-cards.json"),
+                read(self.tray/"toaster-observation.json"),
+                self.tray/"song.wav",self.tray)
+            self.contact_sheet=(receipt,frames)
+            return receipt
+
     def seal_story(self,form):
         with self.lock:
             need(not self.story_path.exists() and not self.profile_path.exists(),
@@ -407,6 +421,10 @@ class FrontPorch:
             paper=self.verify_tray()
             plan=read(self.tray/"paper-plan.json")
             original=read(self.tray/"scene-cards.json")
+            # Derived rectangles are materialized only at an explicit human
+            # story-seal crossing, never during Grab or candidate comparison.
+            cross.materialize_for_form(form,original["assets"],
+                                       self.tray,paper["stillSha256"])
             receipt,cards=story.author(form,paper,plan,original,self.tray)
             self.contact_sheet=None
             self.story_dir.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -642,6 +660,8 @@ class FrontPorch:
                                 if sealed else [.5,.5],
                         "protectText":sealed["shotAssignments"][i]["protectText"]
                                       if sealed else False,
+                        "crosses":sealed["shotAssignments"][i].get("crosses",[])
+                                  if sealed else [],
                     } for i,row in enumerate(read(self.tray/"paper-plan.json")["shots"])],
                     "images":[{
                         "assetId":aid,
@@ -819,7 +839,7 @@ class PorchHandler(workbench.WorkbenchHandler):
         if route not in ("/api/porch/upload","/api/porch/consent",
                          "/api/porch/prepare","/api/porch/story/seal",
                          "/api/porch/filmstrip/make","/api/porch/contact/compare",
-                         "/api/porch/make"):
+                         "/api/porch/cross/compare","/api/porch/make"):
             if self.porch.workbench is None:
                 return self._error(404,"no other action before the first films")
             self.workbench=self.porch.workbench
@@ -860,6 +880,8 @@ class PorchHandler(workbench.WorkbenchHandler):
                     outcome=self.porch.preview_filmstrip(form)
                 elif route=="/api/porch/contact/compare":
                     outcome=self.porch.compare_candidates(form)
+                elif route=="/api/porch/cross/compare":
+                    outcome=self.porch.compare_crossed_bits(form)
                 else:outcome=self.porch.make(form)
             return self._json(201,{"ok":True,"receipt":outcome,"state":self.porch.state()})
         except (OSError,ValueError,KeyError,TypeError,subprocess.CalledProcessError,
