@@ -71,12 +71,54 @@
         <div id="paper-preview" hidden>
           <div class="receipt-strip">PAPER PLAN COMPLETE · A FILM IS STILL A CHOICE</div>
           <p id="plan-status"></p>
+          <section id="storytable" class="storytable" aria-labelledby="story-title">
+            <div class="receipt-strip">BAND-IQ 010 · BEFORE THE FIRST CAMERA MOVES</div>
+            <h3 id="story-title">Your song has places. Give them pictures.</h3>
+            <p>Each card is a real timed piece of your song. Tap a card, pick a picture, and set where the camera should pay attention. A picture can appear more than once, differently each time.</p>
+            <audio id="story-audio" controls preload="metadata" aria-label="Play the owned song while arranging its timed shots"></audio>
+            <div id="story-timeline" class="story-timeline" role="group" aria-label="Song shot timeline"></div>
+            <div class="story-edit-grid">
+              <div class="story-photo-cell">
+                <div class="story-meta" id="story-shot-heading">Select a timed shot</div>
+                <div class="story-frame">
+                  <img id="story-preview" alt="Private source photograph framing guide"/>
+                  <div class="story-crosshair" aria-hidden="true">+</div>
+                </div>
+                <small>Framing guide only · the real film is rendered after approval</small>
+              </div>
+              <div class="story-controls">
+                <div class="story-meta">CHOOSE ITS PICTURE</div>
+                <div id="story-photos" class="story-photos" role="group" aria-label="Choose one owned picture for this shot"></div>
+                <label for="story-focus-x">Focus across the picture <output id="story-x-value">50%</output></label>
+                <input id="story-focus-x" type="range" min="0" max="100" step="5" value="50"/>
+                <label for="story-focus-y">Focus up or down <output id="story-y-value">50%</output></label>
+                <input id="story-focus-y" type="range" min="0" max="100" step="5" value="50"/>
+                <label class="tick story-protect"><input type="checkbox" id="story-protect"/><span>Protect writing or graphics in this shot from the usual crop treatment.</span></label>
+                <div class="story-actions">
+                  <button id="story-previous" type="button" class="story-navigate">← Previous</button>
+                  <button id="story-next" type="button" class="story-navigate">Next →</button>
+                </div>
+              </div>
+            </div>
+            <div id="story-sealing">
+              <label for="story-author">Who arranged this story? <small>A new named creative signature</small></label>
+              <input id="story-author" type="text" maxlength="256" autocomplete="off" placeholder="Your name or review ID"/>
+              <label class="tick"><input id="story-ack" type="checkbox"/><span>I chose the images and framing for all these song windows. Save this exact local arrangement without rendering or publishing.</span></label>
+              <button type="button" id="story-seal" class="primary">Seal my Storytable <span aria-hidden="true">↗</span></button>
+            </div>
+            <div id="story-sealed" class="story-sealed" hidden>
+              <strong>Your story is held.</strong> The first timed arrangement is sealed. The next choice is how the camera moves.
+              <span id="story-sha" class="mono"></span>
+            </div>
+          </section>
+          <div id="camera-step" hidden>
           <h3>How should the camera feel?</h3>
           <div id="lens-picker" class="lenses" role="group" aria-label="Camera language"></div>
           <label for="director">Your new film approval signature</label>
           <input id="director" type="text" maxlength="256" placeholder="An intentional second choice" autocomplete="off">
           <label class="tick"><input type="checkbox" id="render-ok"><span>Make exactly two private, unselected trial films using this camera choice. Neither is automatically my final film.</span></label>
           <button type="button" class="primary" id="make">Make my first two films <span aria-hidden="true">↗</span></button>
+          </div>
         </div>
       </div>
       <div class="paper-right">
