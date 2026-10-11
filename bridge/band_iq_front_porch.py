@@ -632,7 +632,7 @@ class PorchHandler(workbench.WorkbenchHandler):
                 need(0<length<=AUDIO_BYTES,"bounded working audio unavailable")
                 header=self.headers.get("Range")
                 if header:
-                    found=re.fullmatch(r"bytes=(\\d*)-(\\d*)",header)
+                    found=re.fullmatch(r"bytes=(\d*)-(\d*)",header)
                     need(found and (found.group(1) or found.group(2)),
                          "invalid audio range")
                     left,right=found.groups()
