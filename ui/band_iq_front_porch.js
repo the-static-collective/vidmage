@@ -654,6 +654,111 @@
     selectShot(activeShot);
     touchDraft("Draft focus changed. Old candidate pixels are stale.");
   }
+  function guidePointer(event,canvasId,prefix){
+    if(state?.storytable?.sealed||working)return;
+    const box=$(canvasId).getBoundingClientRect();
+    const size=Number($(prefix+"-size").value);
+    const cx=(event.clientX-box.left)/box.width*100;
+    const cy=(event.clientY-box.top)/box.height*100;
+    if(!Number.isFinite(cx)||!Number.isFinite(cy))return;
+    $(""+prefix+"-x").value=String(
+      Math.min(100-size,Math.max(0,Math.round((cx-size/2)/5)*5)));
+    $(""+prefix+"-y").value=String(
+      Math.min(100-size,Math.max(0,Math.round((cy-size/2)/5)*5)));
+    refreshBitGuides();
+  }
+  for(const prefix of ["bit-grab","bit-cross"]){
+    for(const dimension of ["x","y","size"]){
+      $(prefix+"-"+dimension).addEventListener("input",refreshBitGuides);
+    }
+  }
+  $("bit-opacity").addEventListener("input",refreshBitGuides);
+  $("bit-source").addEventListener("change",refreshBitGuides);
+  $("bit-grab-guide").addEventListener("click",e=>
+    guidePointer(e,"bit-grab-guide","bit-grab"));
+  $("bit-cross-guide").addEventListener("click",e=>
+    guidePointer(e,"bit-cross-guide","bit-cross"));
+  $("bit-grab").addEventListener("click",()=>{
+    if(!state?.storytable||state.storytable.sealed)return;
+    grabbedBit={
+      sourceAssetId:$("bit-source").value,
+      crop:bitRectangle("bit-grab"),
+    };
+    $("bit-status").textContent=
+      "Piece grabbed. It remains an in-memory idea; no image has been changed.";
+  });
+  $("bit-cross").addEventListener("click",()=>{
+    if(!grabbedBit||!storyDraft||state?.storytable?.sealed){
+      $("bit-status").textContent="Grab a piece from an owned photograph first.";
+      return;
+    }
+    const bit={
+      sourceAssetId:grabbedBit.sourceAssetId,
+      crop:grabbedBit.crop.slice(),
+      place:bitRectangle("bit-cross"),
+      opacity:Number($("bit-opacity").value)/100,
+    };
+    if(!window.confirm(
+      "Cross this piece of owned imagery into the selected UNSEALED draft shot? "+
+      "Neither original changes. An actual crossed working image is created only "+
+      "after a separate human Storytable seal."))return;
+    storyDraft[activeShot].crossBit=bit;
+    selectShot(activeShot);
+    touchDraft("Crossed an owned fragment into the unsealed shot. "+
+      "Use THIS/THAT to inspect the actual resulting pixels.");
+    $("bit-status").textContent="Crossed into song shot "+(activeShot+1)+
+      ". Source and position will be preserved if the artist seals the Storytable.";
+  });
+  $("bit-uncross").addEventListener("click",()=>{
+    if(!storyDraft||state?.storytable?.sealed)return;
+    if(!storyDraft[activeShot].crossBit){
+      $("bit-status").textContent="No source fragment is crossed into this shot.";
+      return;
+    }
+    delete storyDraft[activeShot].crossBit;
+    selectShot(activeShot);
+    touchDraft("The crossed fragment was lifted from the unsealed draft.");
+    $("bit-status").textContent="Cross removed; owned source files stay unchanged.";
+  });
+  $("candidate-save").addEventListener("click",()=>{
+    if(!storyDraft||state?.storytable?.sealed||trayDrafts.length>=4)return;
+    const snap=cloneShotList(storyDraft);
+    if(trayDrafts.some(t=>JSON.stringify(t.shots)===JSON.stringify(snap))){
+      $("candidate-status").textContent="This precise arrangement is already pinned.";
+      return;
+    }
+    candidateNumber++;
+    trayDrafts.push({
+      title:"POSSIBILITY "+String(candidateNumber).padStart(2,"0"),
+      shots:snap,
+    });
+    $("candidate-status").textContent=
+      "Pinned the complete unsealed draft in session memory. No story or film created.";
+    drawTray();
+  });
+  $("candidate-apply").addEventListener("click",()=>{
+    const candidate=candidateEvidence;
+    if(!candidate||state?.storytable?.sealed||!storyDraft||
+       JSON.stringify(cloneShotList(storyDraft))!==candidate.oldJson){
+      clearCandidatePreview("The draft changed; compare again before applying.");
+      return;
+    }
+    if(!window.confirm(
+      "Apply the WHOLE selected alternative to the UNSEALED draft? "+
+      "No source image, signed story or published film will be altered. "+
+      "The Storytable must still be sealed separately."))return;
+    storyDraft=storyDraft.map((row,i)=>({
+      ...row,...JSON.parse(JSON.stringify(candidate.alt[i])),
+    }));
+    clearCandidatePreview("This candidate entered the draft. Nothing was sealed.");
+    contactShot=-1;
+    contactDraft=null;
+    selectShot(activeShot);
+    drawTray();
+  });
+  $("candidate-cancel").addEventListener("click",()=>{
+    clearCandidatePreview("No candidate applied; your draft is unchanged.");
+  });
   $("contact-image").addEventListener("change",contactControlsChanged);
   $("contact-x").addEventListener("input",contactControlsChanged);
   $("contact-y").addEventListener("input",contactControlsChanged);
