@@ -27,6 +27,7 @@ from . import band_iq_playdeck_native as native
 from . import band_iq_workbench as workbench
 from . import scene_card_film as film
 from . import band_iq_storytable as story
+from . import band_iq_living_filmstrip as strip
 
 PORCH="vidmage/band-iq-009-owned-intake/v1"
 PREPARED="vidmage/band-iq-009-paper-tray/v1"
@@ -159,6 +160,7 @@ class FrontPorch:
         self.story_dir=self.root/"storytable"
         self.story_path=self.story_dir/"story-seal.json"
         self.story_cards_path=self.story_dir/"authored-scene-cards.json"
+        self.filmstrip_dir=self.root/"living-filmstrip"
         self.profile_path=self.root/"private-workbench.json"
         self.performance_path=self.root/"first-performance.json"
         self.workbench=None
@@ -392,6 +394,29 @@ class FrontPorch:
             read(self.tray/"paper-plan.json"),
             read(self.tray/"scene-cards.json"),self.tray)
 
+    def verify_filmstrip(self):
+        sealed,cards=self.verify_story()
+        return strip.verify(self.filmstrip_dir,sealed,
+            read(self.tray/"paper-plan.json"),cards,
+            read(self.tray/"toaster-observation.json"),
+            self.tray/"song.wav",self.tray)
+
+    def preview_filmstrip(self,authorization):
+        with self.lock:
+            need(not self.profile_path.exists(),
+                 "first film already exists; source filmstrip is pre-render only")
+            sealed,cards=self.verify_story()
+            strip.authorize(authorization,sealed)
+            if self.filmstrip_dir.exists():
+                return self.verify_filmstrip()
+            receipt=strip.build(sealed,
+                read(self.tray/"paper-plan.json"),cards,
+                read(self.tray/"toaster-observation.json"),
+                self.tray/"song.wav",self.tray,self.filmstrip_dir)
+            need(receipt==self.verify_filmstrip(),
+                 "source raster preview could not be reopened")
+            return receipt
+
     def make(self,choice):
         with self.lock:
             need(not self.profile_path.exists(),"initial A/B pair already completed")
@@ -405,6 +430,10 @@ class FrontPorch:
                  "film authorization references the wrong owner-arranged shots")
             authorize_first_movie({k:v for k,v in choice.items()
                                    if k!="storySha256"},proposal)
+            if self.filmstrip_dir.exists():
+                sample=self.verify_filmstrip()
+                need(sample["sourceStorySha256"]==story_receipt["storySha256"],
+                     "an existing preview cannot be detached from the human story")
             _,_,doctor=native_blender(self.blender_root)
             native.check_playdeck_checkout(self.playdeck_root)
             pinned_toaster(self.toaster_root)
@@ -491,6 +520,9 @@ class FrontPorch:
                 "sourcePaperTraySha256":proposal["paperTraySha256"],
                 "sourceStorySha256":story_receipt["storySha256"],
                 "authoredCardsSha256":story_receipt["authoredCardsSha256"],
+                "sourceFilmstripSha256":(
+                    self.verify_filmstrip()["filmstripSha256"]
+                    if self.filmstrip_dir.exists() else None),
                 "humanRenderAttestation":choice["operatorAttestationId"],
                 "selectedLens":choice["lensId"],
                 "cycleSha256":cycle["cycleSha256"],
@@ -523,6 +555,9 @@ class FrontPorch:
         wb=self.workbench
         need(p["sourceStorySha256"]==chosen_cards["storySha256"] and
              p["authoredCardsSha256"]==chosen_cards["authoredCardsSha256"] and
+             p["sourceFilmstripSha256"]==(
+                 self.verify_filmstrip()["filmstripSha256"]
+                 if self.filmstrip_dir.exists() else None) and
              wb.profile["nextSources"]["cards"]==str(self.story_cards_path.resolve()) and
              p["sourceIntakeSha256"]==consent["intakeSha256"] and
              p["sourcePaperTraySha256"]==tray["paperTraySha256"] and
@@ -539,6 +574,7 @@ class FrontPorch:
             consent=read(self.intake_path) if self.intake_path.is_file() else None
             prepared=read(self.tray_path) if self.tray_path.is_file() else None
             sealed=self.verify_story()[0] if self.story_path.is_file() else None
+            preview=self.verify_filmstrip() if self.filmstrip_dir.exists() else None
             performed=self.verify_completed() if self.workbench else None
             stage=("films-ready" if performed else
                    "paper-tray" if prepared else
@@ -585,6 +621,30 @@ class FrontPorch:
                         read(self.tray/"scene-cards.json")["assets"]))],
                     "timingIsNativeBlenderPaperPlan":True,
                     "noFilmRenderedBySealing":True,
+                },
+                "filmstrip":None if not prepared else {
+                    "ready":preview is not None,
+                    "sourceStorySha256":sealed["storySha256"] if sealed else None,
+                    "filmstripSha256":preview["filmstripSha256"] if preview else None,
+                    "totalNativeShotCount":preview["totalNativeShotCount"]
+                        if preview else None,
+                    "sampledWindowCount":preview["sampledWindowCount"]
+                        if preview else None,
+                    "limitedSampling":preview is not None and
+                        preview["sampledWindowCount"]<preview["totalNativeShotCount"],
+                    "movieGenerated":False,
+                    "frames":[{
+                        "shotIndex":row["shotIndex"],
+                        "shotId":row["shotId"],
+                        "start":row["start"],"end":row["end"],
+                        "protectText":row["protectText"],
+                        "samples":[{
+                            "atSeconds":im["atSeconds"],
+                            "sha256":im["sha256"],
+                            "url":"/api/porch/filmstrip/frame/%d/%d"%(i,j),
+                        } for j,im in enumerate(row["frames"])],
+                    } for i,row in enumerate(preview["sampledActualRasterShots"])]
+                    if preview else [],
                 },
                 "films":None if not performed else {
                     "originalVidmageSha256":performed["vidmageFilmSha256"],
@@ -666,6 +726,22 @@ class PorchHandler(workbench.WorkbenchHandler):
             except (BrokenPipeError,ConnectionResetError):
                 pass
             return
+        if route.startswith("/api/porch/filmstrip/frame/"):
+            try:
+                tail=route.removeprefix("/api/porch/filmstrip/frame/")
+                need(re.fullmatch(r"\d{1,3}/[0-2]",tail),
+                     "only numbered existing local sketch frames can be displayed")
+                index,subframe=(int(k) for k in tail.split("/"))
+                receipt=self.porch.verify_filmstrip()
+                pic=strip.image_at(self.porch.filmstrip_dir,receipt,index,subframe)
+                data=pic.read_bytes()
+                need(100<len(data)<5*1024*1024,
+                     "bounded local generated still required")
+                self._headers(200,"image/jpeg",len(data))
+                if self.command!="HEAD":self.wfile.write(data)
+            except (ValueError,OSError,KeyError,TypeError):
+                self._error(404,"verified preview still not found")
+            return
         if route=="/api/porch/state":
             try:return self._json(200,self.porch.state())
             except (OSError,ValueError,KeyError,TypeError):
@@ -700,7 +776,7 @@ class PorchHandler(workbench.WorkbenchHandler):
         route=urlsplit(self.path).path
         if route not in ("/api/porch/upload","/api/porch/consent",
                          "/api/porch/prepare","/api/porch/story/seal",
-                         "/api/porch/make"):
+                         "/api/porch/filmstrip/make","/api/porch/make"):
             if self.porch.workbench is None:
                 return self._error(404,"no other action before the first films")
             self.workbench=self.porch.workbench
@@ -737,6 +813,8 @@ class PorchHandler(workbench.WorkbenchHandler):
                     outcome=self.porch.prepare()
                 elif route=="/api/porch/story/seal":
                     outcome=self.porch.seal_story(form)
+                elif route=="/api/porch/filmstrip/make":
+                    outcome=self.porch.preview_filmstrip(form)
                 else:outcome=self.porch.make(form)
             return self._json(201,{"ok":True,"receipt":outcome,"state":self.porch.state()})
         except (OSError,ValueError,KeyError,TypeError,subprocess.CalledProcessError,
