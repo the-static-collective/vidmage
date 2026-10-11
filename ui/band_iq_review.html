@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex,nofollow">
+  <title>BAND-IQ · Review Room</title>
+  <link rel="stylesheet" href="/review.css">
+  <script src="/review.js" defer></script>
+</head>
+<body>
+<main>
+  <header class="mast">
+    <div class="eyebrow">VIDMAGE · BAND-IQ 004 · PRIVATE LOCAL REVIEW</div>
+    <h1>Two films. One human decision.</h1>
+    <p>Same source. Same selected question. Two different ways of performing it. Nothing here publishes or overwrites a film.</p>
+    <div class="metadata">
+      <span id="status" role="status" aria-live="polite">Opening local evidence…</span>
+      <span id="lens"></span>
+      <span id="window"></span>
+    </div>
+  </header>
+  <section class="review-grid" aria-label="Side by side film comparison">
+    <article class="screen">
+      <div class="screen-top"><span class="chip">A / VIDMAGE</span><span>Shot &amp; camera director</span></div>
+      <video id="a" controls playsinline preload="metadata" aria-label="VidMage candidate film"></video>
+      <div class="screen-bottom"><span id="sha-a" class="hash"></span><span>Unselected trial</span></div>
+    </article>
+    <article class="screen">
+      <div class="screen-top"><span class="chip">B / PLAYDECK</span><span>Native Remotion card &amp; world director</span></div>
+      <video id="b" controls playsinline preload="metadata" muted aria-label="Playdeck candidate film"></video>
+      <div class="screen-bottom"><span id="sha-b" class="hash"></span><span>Unselected trial</span></div>
+    </article>
+  </section>
+  <section class="transport" aria-label="Review playback controls">
+    <div class="transport-left">
+      <button type="button" id="play">Play both</button>
+      <button type="button" id="pause">Pause both</button>
+      <button type="button" id="sync">Sync to A</button>
+    </div>
+    <fieldset class="audio-select">
+      <legend>Hear audio from</legend>
+      <label><input type="radio" name="sound" value="a" checked> A</label>
+      <label><input type="radio" name="sound" value="b"> B</label>
+    </fieldset>
+  </section>
+  <section class="evidence">
+    <details>
+      <summary>Evidence inspector · optional</summary>
+      <p>Both outputs are independently verified local MP4s. The same image set, soundtrack, and selected creative question do not imply identical pixels or artistic quality.</p>
+      <dl>
+        <dt>Paired evidence</dt><dd id="pair"></dd>
+        <dt>Same source audio</dt><dd id="same-audio"></dd>
+        <dt>Same source images</dt><dd id="same-images"></dd>
+        <dt>Same selected question</dt><dd id="same-question"></dd>
+      </dl>
+    </details>
+  </section>
+  <section class="decision">
+    <div class="eyebrow">AUTHOR'S REVIEW · NO AUTOMATIC KEEP</div>
+    <h2>What happens next?</h2>
+    <p>KEEP means choosing a trial for <strong>further local continuation</strong>. SCRAPE declines both trials but preserves their history. Another experiment records a new question; it does not start another render.</p>
+    <form id="review-form">
+      <fieldset id="decision-options">
+        <legend>Choose exactly one disposition</legend>
+        <label class="choice"><input type="radio" name="decision" value="KEEP_VIDMAGE" required><span><strong>KEEP A</strong><small>Continue with VidMage's trial</small></span></label>
+        <label class="choice"><input type="radio" name="decision" value="KEEP_PLAYDECK"><span><strong>KEEP B</strong><small>Continue with Playdeck's trial</small></span></label>
+        <label class="choice"><input type="radio" name="decision" value="SCRAPE_BOTH"><span><strong>SCRAPE BOTH</strong><small>Neither trial continues; history remains</small></span></label>
+        <label class="choice"><input type="radio" name="decision" value="ANOTHER_EXPERIMENT"><span><strong>ANOTHER EXPERIMENT</strong><small>Record a new creative question, execute nothing</small></span></label>
+      </fieldset>
+      <label for="question" id="question-label" hidden>What should we try differently?</label>
+      <textarea id="question" maxlength="1200" rows="2" hidden placeholder="Name a specific change worth testing."></textarea>
+      <label for="rationale">What did you notice? <small>Optional · your words, not a model's score</small></label>
+      <textarea id="rationale" maxlength="2000" rows="3" placeholder="For example: the quiet shot should remain quiet."></textarea>
+      <label for="operator">Your explicit review signature <small>Required · a local name or chosen review ID</small></label>
+      <input type="text" id="operator" maxlength="256" required autocomplete="off" placeholder="How should this choice be attributed?">
+      <label class="acknowledge"><input id="acknowledge" type="checkbox" required><span>I understand this records one irrevocable local review receipt. It does not export, publish, spend credits, edit, or delete source files.</span></label>
+      <button class="commit" type="submit" id="commit">Record my decision</button>
+    </form>
+    <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
+    <div id="sealed" class="sealed" hidden>
+      <div class="eyebrow">HUMAN REVIEW RECORDED · READ-ONLY</div>
+      <h3 id="sealed-outcome"></h3>
+      <p>The original movies and the comparison remain intact. A new decision requires a new deliberate review context.</p>
+      <div class="hash" id="sealed-receipt"></div>
+    </div>
+  </section>
+  <footer>VIDMAGE / BAND-IQ · Local bench only · View ≠ KEEP · Selection ≠ publication · Quiet ≠ weak</footer>
+</main>
+</body>
+</html>
