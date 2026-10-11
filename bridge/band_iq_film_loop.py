@@ -196,7 +196,7 @@ def render_selected(cycle,before,selection,plan,cards,observation,audio,
     output=Path(output).resolve()
     need(not output.exists() and not output.with_suffix(".receipt.json").exists(),
          "create-only film output already exists")
-    chosen={k:proposal[k] for k in ("lensId","cameraMode","proposalSha256")}
+    chosen={k:proposal[k] for k in ("lensId","cameraMode","proposalSha256","targetStart","targetEnd")}
     chosen.update({"cycleSha256":cycle["cycleSha256"],
                    "operatorAttestationId":selection["operatorAttestationId"]})
     film_receipt=film.render(plan,cards,observation,audio,asset_root,output,kinetic=False,
