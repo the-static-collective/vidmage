@@ -15,6 +15,7 @@ from . import band_iq as iq
 from . import band_iq_living_filmstrip as strip
 from . import band_iq_film_loop as loop
 from . import scene_card_film as film
+from . import band_iq_candidate_tray as cross
 
 SCHEMA="vidmage/band-iq-012-ephemeral-contact-sheet/v1"
 POSITIONS=strip.POSITIONS
@@ -22,9 +23,10 @@ POSITIONS=strip.POSITIONS
 def need(ok,msg): iq.require(ok,msg)
 
 def checked_choice(choice,assets):
-    need(type(choice)==dict and set(choice)=={
-        "sourceAssetId","focus","protectText"},
-        "one side needs exact already-owned photo, two focus dials and writing protection")
+    need(type(choice)==dict and set(choice) in (
+         {"sourceAssetId","focus","protectText"},
+         {"sourceAssetId","focus","protectText","crossBit"}),
+        "one side needs exact already-owned photo, focus, optional crossed bit and protection")
     aid=choice["sourceAssetId"]
     need(type(aid)==str and aid in assets,
          "only original prepared owned photographs can be compared")
@@ -34,9 +36,12 @@ def checked_choice(choice,assets):
         for x in focus),
         "focus coordinates must be finite numbers in [0,1]")
     need(type(choice["protectText"])==bool,"protectText must be a boolean")
-    return {"sourceAssetId":aid,
+    result={"sourceAssetId":aid,
             "focus":[round(float(x),3) for x in focus],
             "protectText":choice["protectText"]}
+    if "crossBit" in choice:
+        result["crossBit"]=cross.checked_bit(choice["crossBit"],assets)
+    return result
 
 def check_request(form,paper,plan,provisional):
     need(type(form)==dict and set(form)=={
@@ -84,6 +89,15 @@ def comparison(form,paper,plan,provisional,observation,audio,asset_root):
     rows={}
     for side,choice in (("left",left),("right",right)):
         source=assets[choice["sourceAssetId"]]
+        fragment_receipt=None
+        if "crossBit" in choice:
+            fragment_receipt,png=cross.compose(
+                choice["sourceAssetId"],choice["crossBit"],
+                provisional["assets"],asset_root)
+            decoded=cv2.imdecode(__import__("numpy").frombuffer(
+                png,dtype=__import__("numpy").uint8),cv2.IMREAD_COLOR)
+            need(decoded is not None,"actual crossed owner fragment must decode")
+            source={**source,"image":decoded}
         instance={**source,
                   "focus":choice["focus"],
                   "mode":"protect-text" if choice["protectText"] else "subject"}
@@ -108,6 +122,8 @@ def comparison(form,paper,plan,provisional,observation,audio,asset_root):
         rows[side]={
             **choice,"sourceSha256":bindings[choice["sourceAssetId"]],
             "frames":produced}
+        if fragment_receipt is not None:
+            rows[side]["crossBitReceipt"]=fragment_receipt
     basis={
         "schema":SCHEMA,
         "status":"ephemeral-human-candidate-only",
