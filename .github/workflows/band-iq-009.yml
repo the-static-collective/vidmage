@@ -1,0 +1,83 @@
+name: VIDMAGE BAND-IQ 009 The Front Porch
+on:
+  push:
+    branches: [experiment/band-iq-009-front-porch]
+  pull_request:
+    paths:
+      - "bridge/band_iq_front_porch.py"
+      - "ui/band_iq_front_porch.html"
+      - "ui/band_iq_front_porch.css"
+      - "ui/band_iq_front_porch.js"
+      - "tests/test_band_iq_front_porch.py"
+      - "docs/BAND_IQ_009.md"
+      - ".github/workflows/band-iq-009.yml"
+permissions:
+  contents: read
+jobs:
+  actual-owner-source-intake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install decode and private local source inspection
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install Pillow==12.1.1 'numpy>=1.26,<3' 'opencv-python-headless>=4.10,<5'
+      - name: Real song files, owned photo decode, creator rights, arbitrary path and CSRF refusal
+        run: |
+          python -m unittest -v tests.test_band_iq_front_porch.PorchPureTests
+          python -m unittest -v tests.test_band_iq_workbench.WorkshopTests
+          python -m compileall -q bridge tests
+      - name: Bundled browser executable syntax and private-only UI assets
+        run: |
+          node --check ui/band_iq_front_porch.js
+          node --check ui/band_iq_workbench.js
+          ! grep -E 'https?://|<script[^>]+src="https?://' ui/band_iq_front_porch.html
+  true-native-song-to-two-creator-films:
+    needs: actual-owner-source-intake
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Fetch exact native donor source SHAs
+        run: |
+          git clone --quiet https://github.com/the-static-collective/the-haunted-blender.git donor-blender
+          git -C donor-blender checkout --detach cf0256a49ac8aa879cf2a044847d248177fcfad9
+          test "$(git -C donor-blender rev-parse HEAD)" = cf0256a49ac8aa879cf2a044847d248177fcfad9
+          git clone --quiet https://github.com/the-static-collective/the-haunted-toaster.git donor-toaster
+          git -C donor-toaster checkout --detach 3652c2a96b6b287cda316d1c92daadf7c7417eaf
+          test "$(git -C donor-toaster rev-parse HEAD)" = 3652c2a96b6b287cda316d1c92daadf7c7417eaf
+          git clone --quiet https://github.com/the-static-collective/playdeck.git donor-playdeck
+          git -C donor-playdeck checkout --detach 012186fd67f4c4ef1c6591fc5e29cb559b5a80d0
+          test "$(git -C donor-playdeck rev-parse HEAD)" = 012186fd67f4c4ef1c6591fc5e29cb559b5a80d0
+      - name: Install actual local renderers and native Remotion
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install Pillow==12.1.1 'numpy>=1.26,<3' 'opencv-python-headless>=4.10,<5'
+          npm --prefix donor-playdeck install --no-audit --no-fund
+      - name: Actual owned synthetic song, two images, explicit film act, A/B native MP4s, human review and reboot
+        env:
+          VIDMAGE_BLENDER_ROOT: ${{ github.workspace }}/donor-blender
+          VIDMAGE_TOASTER_ROOT: ${{ github.workspace }}/donor-toaster
+          VIDMAGE_PLAYDECK_ROOT: ${{ github.workspace }}/donor-playdeck
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/donor-blender
+        run: |
+          python -m unittest -v tests.test_band_iq_front_porch.PorchNativeTests
+          python -m unittest -v tests.test_band_iq_front_porch.PorchPureTests
+      - name: User data never resides in Git or published media folders
+        run: |
+          test ! -d ./private
+          test ! -d ./media
