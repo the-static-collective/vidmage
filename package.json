@@ -27,6 +27,7 @@
     "band-iq:workbench-proof": "python3 -m unittest -v tests/test_band_iq_workbench.py",
     "band-iq:workbench": "python3 -m bridge.band_iq_workbench --help",
     "band-iq:porch-proof": "python3 -m unittest -v tests/test_band_iq_front_porch.py",
-    "band-iq:porch": "python3 -m bridge.band_iq_front_porch --help"
+    "band-iq:porch": "python3 -m bridge.band_iq_front_porch --help",
+    "band-iq:storytable-proof": "python3 -m unittest -v tests.test_band_iq_storytable"
   }
 }

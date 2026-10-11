@@ -2,6 +2,7 @@
 (() => {
   const $=id=>document.getElementById(id);
   let state=null,working=false;
+  let storyDraft=null,activeShot=0;
   const lensNames={
     landscape:"Wide & wandering",
     architecture:"Rooms & corridors",
@@ -13,7 +14,7 @@
   function message(text){$("feedback").textContent=String(text);}
   function setBusy(active){
     working=active;
-    for(const id of ["song","photos","accept","prepare","make"])$(id).disabled=active;
+    for(const id of ["song","photos","accept","prepare","make","story-seal"])$(id).disabled=active;
   }
   async function request(route,body,options={}){
     const headers={"X-Porch-Token":state.token};
@@ -71,6 +72,98 @@
       $("lens-picker").append(label);
     });
   }
+  function storyShots(){
+    return storyDraft||[];
+  }
+  function shotText(shot,i){
+    return "SHOT "+String(i+1).padStart(2,"0")+" · "+
+      shot.start.toFixed(1)+"–"+shot.end.toFixed(1)+" s";
+  }
+  function selectShot(index){
+    const shots=storyShots(),table=state?.storytable;
+    if(!table||!shots.length)return;
+    activeShot=Math.max(0,Math.min(index,shots.length-1));
+    const shot=shots[activeShot];
+    $("story-shot-heading").textContent=shotText(shot,activeShot);
+    $("story-focus-x").value=Math.round(shot.focus[0]*100);
+    $("story-focus-y").value=Math.round(shot.focus[1]*100);
+    $("story-x-value").textContent=Math.round(shot.focus[0]*100)+"%";
+    $("story-y-value").textContent=Math.round(shot.focus[1]*100)+"%";
+    $("story-protect").checked=shot.protectText;
+    $("story-photos").replaceChildren();
+    table.images.forEach((source,i)=>{
+      const btn=document.createElement("button");
+      btn.className="story-choice";
+      btn.type="button";
+      btn.setAttribute("aria-pressed",String(shot.sourceAssetId===source.assetId));
+      btn.disabled=table.sealed;
+      const img=document.createElement("img");
+      img.src=source.url;
+      img.alt="Owned image "+(i+1);
+      const label=document.createElement("span");
+      label.textContent="PICTURE "+String(i+1).padStart(2,"0");
+      btn.append(img,label);
+      btn.addEventListener("click",()=>{
+        shot.sourceAssetId=source.assetId;
+        selectShot(activeShot);
+      });
+      $("story-photos").append(btn);
+    });
+    const found=table.images.find(a=>a.assetId===shot.sourceAssetId);
+    if(found)$("story-preview").src=found.url;
+    $("story-preview").className="story-focus-x-"+Math.round(shot.focus[0]*100)+
+      " story-focus-y-"+Math.round(shot.focus[1]*100);
+    $("story-timeline").querySelectorAll("button").forEach((btn,i)=>{
+      btn.setAttribute("aria-pressed",String(i===activeShot));
+    });
+    $("story-previous").disabled=activeShot===0;
+    $("story-next").disabled=activeShot===shots.length-1;
+  }
+  function drawStorytable(){
+    const table=state?.storytable;
+    if(!table)return;
+    if(!storyDraft||storyDraft.length!==table.shots.length||table.sealed){
+      storyDraft=table.shots.map(x=>({
+        shotId:x.shotId,start:x.start,end:x.end,
+        sourceAssetId:x.sourceAssetId,
+        focus:x.focus.slice(),protectText:x.protectText,
+      }));
+    }
+    $("story-audio").src="/api/porch/story/audio";
+    $("story-timeline").replaceChildren();
+    const total=table.shots[table.shots.length-1].end;
+    storyDraft.forEach((shot,i)=>{
+      const button=document.createElement("button");
+      button.type="button";
+      button.className="story-shot";
+      button.classList.add("story-span-"+Math.max(1,Math.min(5,
+        Math.round((shot.end-shot.start)/(total/storyDraft.length)))));
+      button.setAttribute("aria-label",shotText(shot,i));
+      button.setAttribute("aria-pressed",String(i===activeShot));
+      const mark=document.createElement("span");mark.className="story-mark";
+      mark.textContent=String(i+1).padStart(2,"0");
+      const time=document.createElement("small");
+      time.textContent=shot.start.toFixed(1)+"–"+shot.end.toFixed(1)+"s";
+      button.append(mark,time);
+      button.addEventListener("click",()=>{
+        selectShot(i);
+        try{$("story-audio").currentTime=shot.start;}catch{}
+      });
+      $("story-timeline").append(button);
+    });
+    selectShot(Math.min(activeShot,storyDraft.length-1));
+    for(const id of ["story-focus-x","story-focus-y","story-protect","story-author",
+                     "story-ack","story-seal"]){
+      $(id).disabled=table.sealed;
+    }
+    $("story-sealing").hidden=table.sealed;
+    $("story-sealed").hidden=!table.sealed;
+    $("camera-step").hidden=!table.sealed;
+    if(table.sealed){
+      $("story-sha").textContent="Storytable receipt SHA-256 "+table.storySha256;
+    }
+  }
+
   function render() {
     const stage=state.stage;
     const haveConsent=!!state.consent;
@@ -100,6 +193,7 @@
         " seconds planned · "+state.paper.sourceCount+
         " owned images · all selected films remain trials until a human KEEP.";
       lensPicker(state.paper.lensIds);
+      drawStorytable();
     }
     if(made){
       $("receipt-status").textContent="Original VidMage "+state.films.originalVidmageSha256+
@@ -190,8 +284,69 @@
     }catch(error){message(error.message||"Local preparation could not be verified.");}
     finally{setBusy(false);}
   });
+  function changeFocus(){
+    if(!storyDraft||state?.storytable?.sealed)return;
+    const shot=storyDraft[activeShot];
+    shot.focus=[
+      Number($("story-focus-x").value)/100,
+      Number($("story-focus-y").value)/100,
+    ];
+    $("story-protect").checked=shot.protectText;
+    selectShot(activeShot);
+  }
+  $("story-focus-x").addEventListener("input",changeFocus);
+  $("story-focus-y").addEventListener("input",changeFocus);
+  $("story-protect").addEventListener("change",()=>{
+    if(!storyDraft||state?.storytable?.sealed)return;
+    storyDraft[activeShot].protectText=$("story-protect").checked;
+  });
+  $("story-previous").addEventListener("click",()=>selectShot(activeShot-1));
+  $("story-next").addEventListener("click",()=>selectShot(activeShot+1));
+  $("story-audio").addEventListener("timeupdate",()=>{
+    const t=$("story-audio").currentTime;
+    if(!storyDraft||!Number.isFinite(t))return;
+    const next=storyDraft.findIndex((s,i)=>
+      t>=s.start&& (t<s.end||i===storyDraft.length-1&&t<=s.end));
+    if(next>=0&&next!==activeShot)selectShot(next);
+  });
+  $("story-seal").addEventListener("click",async()=>{
+    if(working||!storyDraft||state.storytable?.sealed)return;
+    const artist=$("story-author").value.trim();
+    if(!artist||!$("story-ack").checked){
+      message("Name the creator and approve this precise local shot arrangement first.");
+      return;
+    }
+    const form={
+      paperTraySha256:state.paper.paperTraySha256,
+      operatorAttestationId:artist,
+      decision:"SEAL_STORYTABLE",
+      shots:storyDraft.map(x=>({
+        shotId:x.shotId,sourceAssetId:x.sourceAssetId,
+        focus:x.focus.slice(),protectText:x.protectText,
+      })),
+      preserveOriginals:true,publish:false,
+      allowPaidProviders:false,allowNetworkUpload:false,
+    };
+    if(!window.confirm(
+      "Seal your authored storytable? Each actual song window, chosen owned picture, "+
+      "focus and protected-writing setting will be preserved. "+
+      "No film is rendered by this action."))return;
+    setBusy(true);
+    message("Preserving the exact timed human arrangement and source image hashes…");
+    try{
+      await request("/api/porch/story/seal",form);
+      render();
+      message("Your Storytable is sealed. Now you can choose a camera language.");
+    }catch(error){message(error.message||"The source arrangement was not accepted.");}
+    finally{setBusy(false);}
+  });
+
   $("make").addEventListener("click",async()=>{
     if(working||!state?.paper)return;
+    if(!state.storytable?.sealed){
+      message("Choose and seal the actual timed scene cards before making any film.");
+      return;
+    }
     const selected=document.querySelector('input[name="lens"]:checked');
     const attestation=$("director").value.trim();
     if(!selected||!attestation||!$("render-ok").checked){
@@ -200,6 +355,7 @@
     }
     const choice={
       paperTraySha256:state.paper.paperTraySha256,
+      storySha256:state.storytable.storySha256,
       lensId:selected.value,
       operatorAttestationId:attestation,
       makeOneLocalABPair:true,

@@ -26,6 +26,7 @@ from . import band_iq_film_loop as film_loop
 from . import band_iq_playdeck_native as native
 from . import band_iq_workbench as workbench
 from . import scene_card_film as film
+from . import band_iq_storytable as story
 
 PORCH="vidmage/band-iq-009-owned-intake/v1"
 PREPARED="vidmage/band-iq-009-paper-tray/v1"
@@ -155,6 +156,9 @@ class FrontPorch:
         self.playdeck_root=Path(playdeck_root).expanduser().resolve()
         self.intake_path=self.root/"consent.json"
         self.tray_path=self.tray/"proposal.json"
+        self.story_dir=self.root/"storytable"
+        self.story_path=self.story_dir/"story-seal.json"
+        self.story_cards_path=self.story_dir/"authored-scene-cards.json"
         self.profile_path=self.root/"private-workbench.json"
         self.performance_path=self.root/"first-performance.json"
         self.workbench=None
@@ -365,16 +369,48 @@ class FrontPorch:
         film.validate(plan,cards,observation,self.tray)
         return p
 
+    def seal_story(self,form):
+        with self.lock:
+            need(not self.story_path.exists() and not self.profile_path.exists(),
+                 "storytable is already sealed; do not rewrite a human choice")
+            paper=self.verify_tray()
+            plan=read(self.tray/"paper-plan.json")
+            original=read(self.tray/"scene-cards.json")
+            receipt,cards=story.author(form,paper,plan,original,self.tray)
+            self.story_dir.mkdir(parents=True,exist_ok=True,mode=0o700)
+            write_exclusive(self.story_cards_path,cards)
+            write_exclusive(self.story_path,receipt)
+            need(self.verify_story()[0]==receipt,
+                 "source-authored shot table failed to reopen")
+            return receipt
+
+    def verify_story(self):
+        paper=self.verify_tray()
+        need(self.story_path.is_file() and self.story_cards_path.is_file(),
+             "artist must seal the complete storytable BEFORE either film")
+        return story.verified(self.story_path,self.story_cards_path,paper,
+            read(self.tray/"paper-plan.json"),
+            read(self.tray/"scene-cards.json"),self.tray)
+
     def make(self,choice):
         with self.lock:
             need(not self.profile_path.exists(),"initial A/B pair already completed")
             proposal=self.verify_tray()
-            authorize_first_movie(choice,proposal)
+            # 010 makes story authorship a hard prerequisite. One cannot
+            # bypass the human's shot arrangement via the older render door.
+            need(isinstance(choice,dict) and "storySha256" in choice,
+                 "render needs the separate sealed human Storytable receipt")
+            story_receipt,cards=self.verify_story()
+            need(choice["storySha256"]==story_receipt["storySha256"],
+                 "film authorization references the wrong owner-arranged shots")
+            authorize_first_movie({k:v for k,v in choice.items()
+                                   if k!="storySha256"},proposal)
             _,_,doctor=native_blender(self.blender_root)
             native.check_playdeck_checkout(self.playdeck_root)
             pinned_toaster(self.toaster_root)
             plan=read(self.tray/"paper-plan.json")
-            cards=read(self.tray/"scene-cards.json")
+            # Cards are the actual author-sealed shot occurrences,
+            # never the machine's original provisional assignments.
             observation=read(self.tray/"toaster-observation.json")
             audio=self.tray/"song.wav"
             self.films.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -444,7 +480,7 @@ class FrontPorch:
                  "playdeck_receipt":receipt_path,"playdeck_movie":b,
                  "record_dir":self.records},
                 {"plan":self.tray/"paper-plan.json",
-                 "cards":self.tray/"scene-cards.json",
+                 "cards":self.story_cards_path,
                  "observation":self.tray/"toaster-observation.json",
                  "audio":audio,"asset_root":self.tray},
                 blender_root=self.blender_root)
@@ -453,6 +489,8 @@ class FrontPorch:
                 "schema":PERFORMANCE,
                 "sourceIntakeSha256":read(self.intake_path)["intakeSha256"],
                 "sourcePaperTraySha256":proposal["paperTraySha256"],
+                "sourceStorySha256":story_receipt["storySha256"],
+                "authoredCardsSha256":story_receipt["authoredCardsSha256"],
                 "humanRenderAttestation":choice["operatorAttestationId"],
                 "selectedLens":choice["lensId"],
                 "cycleSha256":cycle["cycleSha256"],
@@ -480,9 +518,13 @@ class FrontPorch:
         from . import band_iq_next_question as nextq
         p=nextq.ensure_record(read(self.performance_path),PERFORMANCE,"performanceSha256")
         tray=self.verify_tray()
+        chosen_cards,source_cards=self.verify_story()
         consent,_,_=self.verify_intake()
         wb=self.workbench
-        need(p["sourceIntakeSha256"]==consent["intakeSha256"] and
+        need(p["sourceStorySha256"]==chosen_cards["storySha256"] and
+             p["authoredCardsSha256"]==chosen_cards["authoredCardsSha256"] and
+             wb.profile["nextSources"]["cards"]==str(self.story_cards_path.resolve()) and
+             p["sourceIntakeSha256"]==consent["intakeSha256"] and
              p["sourcePaperTraySha256"]==tray["paperTraySha256"] and
              p["vidmageFilmSha256"]==wb.first.pair["vidmageFilmSha256"] and
              p["playdeckFilmSha256"]==wb.first.pair["playdeckFilmSha256"] and
@@ -496,6 +538,7 @@ class FrontPorch:
             song,photos=self._uploads()
             consent=read(self.intake_path) if self.intake_path.is_file() else None
             prepared=read(self.tray_path) if self.tray_path.is_file() else None
+            sealed=self.verify_story()[0] if self.story_path.is_file() else None
             performed=self.verify_completed() if self.workbench else None
             stage=("films-ready" if performed else
                    "paper-tray" if prepared else
@@ -519,6 +562,30 @@ class FrontPorch:
                     "sourceCount":len(photos),
                     "lensIds":list(HELD_LENSES),
                     "preparedOnly":True},
+                "storytable":None if not prepared else {
+                    "paperTraySha256":prepared["paperTraySha256"],
+                    "sealed":sealed is not None,
+                    "storySha256":sealed["storySha256"] if sealed else None,
+                    "shots":[{
+                        "shotId":row["id"],
+                        "start":row["start"],"end":row["end"],
+                        "sourceAssetId":(
+                            sealed["shotAssignments"][i]["sourceAssetId"]
+                            if sealed else read(self.tray/"scene-cards.json")["shots"][i]["assetId"]),
+                        "focus":sealed["shotAssignments"][i]["focus"]
+                                if sealed else [.5,.5],
+                        "protectText":sealed["shotAssignments"][i]["protectText"]
+                                      if sealed else False,
+                    } for i,row in enumerate(read(self.tray/"paper-plan.json")["shots"])],
+                    "images":[{
+                        "assetId":aid,
+                        "url":"/api/porch/photo/image-%03d"%(i+1),
+                        "sha256":prepared["stillSha256"][aid],
+                    } for i,aid in enumerate(sorted(
+                        read(self.tray/"scene-cards.json")["assets"]))],
+                    "timingIsNativeBlenderPaperPlan":True,
+                    "noFilmRenderedBySealing":True,
+                },
                 "films":None if not performed else {
                     "originalVidmageSha256":performed["vidmageFilmSha256"],
                     "nativePlaydeckSha256":performed["playdeckFilmSha256"],
@@ -555,6 +622,50 @@ class PorchHandler(workbench.WorkbenchHandler):
             return self._files("/porch")
         if route in ("/porch","/porch.js","/porch.css"):
             return self._files(route)
+        if route=="/api/porch/story/audio":
+            try:
+                prepared=self.porch.verify_tray()
+                file=self.porch.tray/"song.wav"
+                need(donors.sha_file(file)==prepared["audioSha256"],
+                     "song bytes changed since the native paper arrangement")
+                length=file.stat().st_size
+                need(0<length<=AUDIO_BYTES,"bounded working audio unavailable")
+                header=self.headers.get("Range")
+                if header:
+                    found=re.fullmatch(r"bytes=(\d*)-(\d*)",header)
+                    need(found and (found.group(1) or found.group(2)),
+                         "invalid audio range")
+                    left,right=found.groups()
+                    if left:
+                        start=int(left)
+                        end=min(int(right),length-1) if right else length-1
+                    else:
+                        start=max(0,length-int(right))
+                        end=length-1
+                    need(start<length and end>=start,"unsatisfiable audio range")
+                    extras={"Accept-Ranges":"bytes",
+                            "Content-Range":f"bytes {start}-{end}/{length}"}
+                    code=206
+                else:
+                    start,end=0,length-1
+                    extras={"Accept-Ranges":"bytes"};code=200
+                self._headers(code,"audio/wav",end-start+1,extras)
+                if self.command=="HEAD":return
+                with file.open("rb") as src:
+                    src.seek(start)
+                    remaining=end-start+1
+                    while remaining:
+                        part=src.read(min(1024*1024,remaining))
+                        if not part:break
+                        self.wfile.write(part)
+                        remaining-=len(part)
+            except (OSError,ValueError,KeyError,TypeError):
+                if not self.wfile.closed:
+                    try:self.connection.close()
+                    except OSError:pass
+            except (BrokenPipeError,ConnectionResetError):
+                pass
+            return
         if route=="/api/porch/state":
             try:return self._json(200,self.porch.state())
             except (OSError,ValueError,KeyError,TypeError):
@@ -588,7 +699,8 @@ class PorchHandler(workbench.WorkbenchHandler):
     def do_POST(self):
         route=urlsplit(self.path).path
         if route not in ("/api/porch/upload","/api/porch/consent",
-                         "/api/porch/prepare","/api/porch/make"):
+                         "/api/porch/prepare","/api/porch/story/seal",
+                         "/api/porch/make"):
             if self.porch.workbench is None:
                 return self._error(404,"no other action before the first films")
             self.workbench=self.porch.workbench
@@ -603,6 +715,7 @@ class PorchHandler(workbench.WorkbenchHandler):
             length=int(self.headers.get("Content-Length","0"))
             cap=(AUDIO_BYTES if self.headers.get("X-Porch-Kind")=="audio"
                  else IMAGE_BYTES if self.headers.get("X-Porch-Kind")=="image"
+                 else 75000 if route=="/api/porch/story/seal"
                  else 3000)
             need(0<length<=cap,"local file or approval exceeds bounded size")
             content_type=self.headers.get("Content-Type","").split(";")[0].lower()
@@ -622,6 +735,8 @@ class PorchHandler(workbench.WorkbenchHandler):
                     need(form=={"prepareLocalPaper":True},
                          "paper preparation needs a separate explicit action")
                     outcome=self.porch.prepare()
+                elif route=="/api/porch/story/seal":
+                    outcome=self.porch.seal_story(form)
                 else:outcome=self.porch.make(form)
             return self._json(201,{"ok":True,"receipt":outcome,"state":self.porch.state()})
         except (OSError,ValueError,KeyError,TypeError,subprocess.CalledProcessError,
