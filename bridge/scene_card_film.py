@@ -71,6 +71,30 @@ def pulse_times(knots):
         if len(chosen)==20:break
     return sorted(chosen)
 
+CAMERAS = ("survey","hinge-orbit","pulse-dolly","snap-frame","wind-eye","parallax-orbit")
+
+def selected_camera(frame, mode, at, shot_index):
+    """Bounded deterministic camera grammar over existing pixels; no semantic object claims."""
+    if mode not in CAMERAS: raise ValueError("Unknown cinematic camera mode")
+    h,w=frame.shape[:2]
+    # Small positive zoom leaves room for the camera to translate without disclosing new pixels.
+    if mode=="survey":
+        dx=0.015*math.sin(at*.36+shot_index);dy=.010*math.cos(at*.22);zoom=1.018;rot=.14*math.sin(at*.25)
+    elif mode=="hinge-orbit":
+        dx=.024*math.sin(at*.77+shot_index);dy=.019*math.cos(at*.51);zoom=1.04;rot=.45*math.sin(at*.7)
+    elif mode=="pulse-dolly":
+        dx=.008*math.sin(at*.3);dy=.01*math.cos(at*.42);zoom=1.015+.042*(1+math.sin(at*1.45))/2;rot=0.
+    elif mode=="snap-frame":
+        phase=int(at*2.1+shot_index)
+        dx=.028*math.sin(phase*2.37);dy=.025*math.sin(phase*3.11);zoom=1.04;rot=.7*math.sin(phase*4.21)
+    elif mode=="wind-eye":
+        dx=.038*math.sin(at*.82+shot_index);dy=.027*math.cos(at*.61);zoom=1.045;rot=.70*math.sin(at*.53)
+    else:
+        dx=.041*math.sin(at*.59+shot_index);dy=.030*math.cos(at*.41);zoom=1.06;rot=.85*math.sin(at*.48)
+    matrix=cv2.getRotationMatrix2D((w/2,h/2),rot,zoom)
+    matrix[0,2]+=dx*w; matrix[1,2]+=dy*h
+    return cv2.warpAffine(frame,matrix,(w,h),borderMode=cv2.BORDER_REPLICATE)
+
 def frame_for(source,progress,energy,pulse):
     image=source["image"];focus=source["focus"];mode=source["mode"]
     ih,iw=image.shape[:2]
@@ -95,7 +119,14 @@ def frame_for(source,progress,energy,pulse):
         frame=cv2.warpAffine(frame,matrix,(WIDTH,HEIGHT),borderMode=cv2.BORDER_REPLICATE)
     return frame
 
-def render(plan,cards,observations,audio,root,output,kinetic=False):
+def render(plan,cards,observations,audio,root,output,kinetic=False,cinematic=None):
+    # BAND-IQ's selected camera is optional for existing CROSS-001 callers.
+    # Human selection and exact proposal identity are validated by BAND-IQ 002.
+    if cinematic is not None:
+        if not isinstance(cinematic,dict) or cinematic.get("cameraMode") not in CAMERAS:
+            raise ValueError("Bounded BAND-IQ camera mode required")
+        if not isinstance(cinematic.get("proposalSha256"),str) or len(cinematic["proposalSha256"])!=64:
+            raise ValueError("Selected proposal evidence required")
     output=Path(output).resolve();audio=Path(audio).resolve(strict=True)
     if output.exists() or output.with_suffix(".receipt.json").exists():
         raise FileExistsError("Create-only: will not replace an output")
@@ -121,7 +152,10 @@ def render(plan,cards,observations,audio,root,output,kinetic=False):
                 energy=value(lanes["raw-energy-envelope"],tm)
                 pulse=max([max(0,1-abs(tm-t)/.52)**2 for t in pulses] or [0])
                 if not choice.get("kineticSafe") or source["mode"]=="protect-text":pulse=0
-                process.stdin.write(frame_for(source,fraction,energy,pulse).tobytes())
+                frame=frame_for(source,fraction,energy,pulse)
+                if cinematic is not None and source["mode"]!="protect-text":
+                    frame=selected_camera(frame,cinematic["cameraMode"],tm,at_shot)
+                process.stdin.write(frame.tobytes())
             process.stdin.close()
             if process.wait(timeout=75)!=0:raise RuntimeError(process.stderr.read().decode()[-400:])
             process.stderr.close()
@@ -141,6 +175,7 @@ def render(plan,cards,observations,audio,root,output,kinetic=False):
              "sources":{k:v["sha256"] for k,v in assets.items()},
              "kineticSelected":bool(kinetic),"kineticEvents":pulses,
              "humanKeep":False,"published":False,"providerCredits":0,"externalGenerations":0,
+             "cinematicSelection":({k:cinematic[k] for k in ("lensId","cameraMode","proposalSha256","cycleSha256","operatorAttestationId")} if cinematic else None),
              "streams":probe["streams"]}
     output.with_suffix(".receipt.json").write_text(json.dumps(receipt,indent=2)+"\n")
     return receipt

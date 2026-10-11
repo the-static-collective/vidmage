@@ -11,6 +11,8 @@
     "test": "node --test tests/*.test.mjs",
     "verify:donors": "node scripts/check-donors.mjs",
     "band-iq:proof": "python3 -m unittest -v tests/test_band_iq.py tests/test_band_iq_donors.py",
-    "band-iq:capabilities": "python3 -m bridge.band_iq_donors capabilities"
+    "band-iq:capabilities": "python3 -m bridge.band_iq_donors capabilities",
+    "band-iq:film-proof": "python3 -m unittest -v tests/test_band_iq_film_loop.py",
+    "band-iq:film-help": "python3 -m bridge.band_iq_film_loop --help"
   }
 }
