@@ -1,0 +1,89 @@
+name: VIDMAGE BAND-IQ 013 Candidate Tray and Grab Cross Bits
+on:
+  push:
+    branches: [experiment/band-iq-013-candidate-tray]
+  pull_request:
+    paths:
+      - "bridge/band_iq_candidate_tray.py"
+      - "bridge/band_iq_storytable.py"
+      - "bridge/band_iq_contact_sheet.py"
+      - "bridge/band_iq_front_porch.py"
+      - "ui/band_iq_front_porch.html"
+      - "ui/band_iq_front_porch.css"
+      - "ui/band_iq_front_porch.js"
+      - "tests/test_band_iq_candidate_tray.py"
+      - "tests/test_band_iq_front_porch.py"
+      - "docs/BAND_IQ_013.md"
+      - ".github/workflows/band-iq-013.yml"
+permissions:
+  contents: read
+jobs:
+  bit-source-and-candidate-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Local real image/audio dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install Pillow==12.1.1 'numpy>=1.26,<3' 'opencv-python-headless>=4.10,<5'
+      - name: Actual bounded image fragments, source-SHA custody, previous Storytable and Contact checks
+        run: |
+          python -m unittest -v tests.test_band_iq_candidate_tray
+          python -m unittest -v tests.test_band_iq_contact_sheet
+          python -m unittest -v tests.test_band_iq_storytable
+          python -m unittest -v tests.test_band_iq_front_porch.PorchPureTests
+          python -m compileall -q bridge tests
+      - name: Strict browser local media and script syntax
+        run: |
+          node --check ui/band_iq_front_porch.js
+          node --check ui/band_iq_workbench.js
+          ! grep -E 'https?://|<script[^>]+src="https?://' ui/band_iq_front_porch.html
+  native-story-uses-owner-crossed-image:
+    needs: bit-source-and-candidate-integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Exact pinned donor branches
+        run: |
+          git clone --quiet https://github.com/the-static-collective/the-haunted-blender.git donor-blender
+          git -C donor-blender checkout --detach cf0256a49ac8aa879cf2a044847d248177fcfad9
+          test "$(git -C donor-blender rev-parse HEAD)" = cf0256a49ac8aa879cf2a044847d248177fcfad9
+          git clone --quiet https://github.com/the-static-collective/the-haunted-toaster.git donor-toaster
+          git -C donor-toaster checkout --detach 3652c2a96b6b287cda316d1c92daadf7c7417eaf
+          test "$(git -C donor-toaster rev-parse HEAD)" = 3652c2a96b6b287cda316d1c92daadf7c7417eaf
+          git clone --quiet https://github.com/the-static-collective/playdeck.git donor-playdeck
+          git -C donor-playdeck checkout --detach 012186fd67f4c4ef1c6591fc5e29cb559b5a80d0
+          test "$(git -C donor-playdeck rev-parse HEAD)" = 012186fd67f4c4ef1c6591fc5e29cb559b5a80d0
+      - name: Real source native renderers
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install Pillow==12.1.1 'numpy>=1.26,<3' 'opencv-python-headless>=4.10,<5'
+          npm --prefix donor-playdeck install --no-audit --no-fund
+      - name: Real owner song photos cross-bit candidate HTTP -> sealed derived -> VidMage and native Playdeck movies -> human review
+        env:
+          VIDMAGE_BLENDER_ROOT: ${{ github.workspace }}/donor-blender
+          VIDMAGE_TOASTER_ROOT: ${{ github.workspace }}/donor-toaster
+          VIDMAGE_PLAYDECK_ROOT: ${{ github.workspace }}/donor-playdeck
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/donor-blender
+        run: |
+          python -m unittest -v tests.test_band_iq_front_porch.PorchNativeTests
+          python -m unittest -v tests.test_band_iq_candidate_tray
+      - name: No creator originals/receipts in Git repository
+        run: |
+          test ! -d ./private
+          test ! -d ./media

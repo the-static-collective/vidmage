@@ -4,6 +4,7 @@
   let state=null,working=false;
   let storyDraft=null,activeShot=0;
   let contactShot=-1,contactDraft=null,contactEvidence=null;
+  let trayDrafts=[],grabbedBit=null,candidateEvidence=null,candidateNumber=0;
   const lensNames={
     landscape:"Wide & wandering",
     architecture:"Rooms & corridors",
@@ -15,7 +16,7 @@
   function message(text){$("feedback").textContent=String(text);}
   function setBusy(active){
     working=active;
-    for(const id of ["song","photos","accept","prepare","make","story-seal","make-filmstrip","contact-compare","contact-apply"])$(id).disabled=active;
+    for(const id of ["song","photos","accept","prepare","make","story-seal","make-filmstrip","contact-compare","contact-apply","candidate-save","candidate-apply","bit-cross","bit-grab"])$(id).disabled=active;
   }
   async function request(route,body,options={}){
     const headers={"X-Porch-Token":state.token};
@@ -82,11 +83,14 @@
   }
   function currentShotChoice(){
     const shot=storyDraft?.[activeShot];
-    return shot?{
+    if(!shot)return null;
+    const result={
       sourceAssetId:shot.sourceAssetId,
       focus:shot.focus.slice(),
       protectText:shot.protectText,
-    }:null;
+    };
+    if(shot.crossBit)result.crossBit=JSON.parse(JSON.stringify(shot.crossBit));
+    return result;
   }
   function sourceOptionList(){
     const table=state?.storytable;
@@ -119,6 +123,7 @@
         sourceAssetId:left.sourceAssetId,
         focus:left.focus.slice(),
         protectText:left.protectText,
+        ...(left.crossBit?{crossBit:JSON.parse(JSON.stringify(left.crossBit))}:{}),
       };
       sourceOptionList();
       $("contact-image").value=contactDraft.sourceAssetId;
@@ -144,6 +149,7 @@
       focus:[Number($("contact-x").value)/100,
              Number($("contact-y").value)/100],
       protectText:$("contact-protect").checked,
+      ...(contactDraft.crossBit?{crossBit:JSON.parse(JSON.stringify(contactDraft.crossBit))}:{}),
     };
     $("contact-x-value").textContent=Math.round(contactDraft.focus[0]*100)+"%";
     $("contact-y-value").textContent=Math.round(contactDraft.focus[1]*100)+"%";
@@ -200,6 +206,7 @@
       btn.addEventListener("click",()=>{
         shot.sourceAssetId=source.assetId;
         selectShot(activeShot);
+        touchDraft("Draft source changed; comparisons need fresh source pixels.");
       });
       $("story-photos").append(btn);
     });
@@ -213,6 +220,7 @@
     $("story-previous").disabled=activeShot===0;
     $("story-next").disabled=activeShot===shots.length-1;
     syncContactForShot();
+    refreshBitGuides();
   }
   function drawStorytable(){
     const table=state?.storytable;
@@ -222,6 +230,7 @@
         shotId:x.shotId,start:x.start,end:x.end,
         sourceAssetId:x.sourceAssetId,
         focus:x.focus.slice(),protectText:x.protectText,
+        ...(x.crossBit?{crossBit:JSON.parse(JSON.stringify(x.crossBit))}:{}),
       }));
     }
     $("story-audio").src="/api/porch/story/audio";
@@ -258,6 +267,205 @@
       $("story-sha").textContent="Storytable receipt SHA-256 "+table.storySha256;
     }
     drawFilmstrip();
+    drawTray();
+  }
+
+  function cloneShotList(items){
+    return JSON.parse(JSON.stringify(items.map(row=>({
+      shotId:row.shotId,sourceAssetId:row.sourceAssetId,
+      focus:row.focus,protectText:row.protectText,
+      ...(row.crossBit?{crossBit:row.crossBit}:{}),
+    }))));
+  }
+  function clearCandidatePreview(reason){
+    candidateEvidence=null;
+    $("candidate-comparison").hidden=true;
+    if(reason)$("candidate-status").textContent=reason;
+  }
+  function syncBitSourceOptions(){
+    const chosen=$("bit-source").value;
+    $("bit-source").replaceChildren();
+    (state?.storytable?.images||[]).forEach((entry,i)=>{
+      const option=document.createElement("option");
+      option.value=entry.assetId;
+      option.textContent="Owned picture "+String(i+1).padStart(2,"0");
+      $("bit-source").append(option);
+    });
+    if(chosen&&state.storytable.images.some(x=>x.assetId===chosen)){
+      $("bit-source").value=chosen;
+    }
+  }
+  function bitRectangle(prefix){
+    const size=Number($(prefix+"-size").value)/100;
+    const x=Math.min(Number($(prefix+"-x").value)/100,1-size);
+    const y=Math.min(Number($(prefix+"-y").value)/100,1-size);
+    return [Number(x.toFixed(3)),Number(y.toFixed(3)),
+            Number(size.toFixed(3)),Number(size.toFixed(3))];
+  }
+  function drawBitGuide(id,assetId,rect,legend){
+    const canvas=$(id);
+    if(!canvas||!state?.storytable)return;
+    const imageRef=state.storytable.images.find(x=>x.assetId===assetId);
+    if(!imageRef)return;
+    const context=canvas.getContext("2d");
+    const img=new Image();
+    img.onload=()=>{
+      if(state?.storytable?.sealed)return;
+      context.clearRect(0,0,320,180);
+      context.drawImage(img,0,0,320,180);
+      context.fillStyle="rgba(8,21,14,.37)";
+      context.fillRect(0,0,320,180);
+      const [x,y,w,h]=rect;
+      context.drawImage(img,x*img.naturalWidth,y*img.naturalHeight,
+                        w*img.naturalWidth,h*img.naturalHeight,
+                        x*320,y*180,w*320,h*180);
+      context.lineWidth=3;
+      context.strokeStyle="#e9d391";
+      context.strokeRect(x*320+1,y*180+1,w*320-2,h*180-2);
+      context.font="bold 12px ui-monospace,monospace";
+      context.fillStyle="#fff1c7";
+      context.fillText(legend,10,18);
+    };
+    img.src=imageRef.url;
+  }
+  function refreshBitGuides(){
+    if(!state?.storytable||state.storytable.sealed)return;
+    for(const id of ["bit-grab-x","bit-grab-y","bit-grab-size",
+                     "bit-cross-x","bit-cross-y","bit-cross-size","bit-opacity"]){
+      $(id+"-out").textContent=$(id).value+"%";
+    }
+    drawBitGuide("bit-grab-guide",$("bit-source").value,
+                 bitRectangle("bit-grab"),"GRAB / OWNED SOURCE");
+    const current=storyDraft?.[activeShot];
+    if(current)drawBitGuide("bit-cross-guide",current.sourceAssetId,
+                  bitRectangle("bit-cross"),"CROSS / TARGET SHOT");
+  }
+  function drawTray(){
+    const table=state?.storytable;
+    $("candidate-tray").hidden=!table||table.sealed;
+    if(!table||table.sealed){
+      trayDrafts=[];grabbedBit=null;candidateEvidence=null;return;
+    }
+    syncBitSourceOptions();
+    refreshBitGuides();
+    $("candidate-collection").replaceChildren();
+    if(!trayDrafts.length){
+      const notice=document.createElement("p");
+      notice.className="candidate-empty";
+      notice.textContent="No alternate arrangements pinned yet. You can keep up to four independent drafts in this local tray.";
+      $("candidate-collection").append(notice);
+    }
+    trayDrafts.forEach((item,i)=>{
+      const card=document.createElement("article");
+      card.className="candidate-pinned";
+      const name=document.createElement("strong");
+      name.textContent=item.title;
+      const metadata=document.createElement("small");
+      const diff=item.shots.filter((shot,j)=>
+        JSON.stringify(shot)!==JSON.stringify(cloneShotList(storyDraft)[j])).length;
+      metadata.textContent=diff+" shot(s) differ from current draft · "+
+        item.shots.filter(s=>s.crossBit).length+" grabbed/crossed bit(s)";
+      const actions=document.createElement("div");
+      actions.className="candidate-buttons";
+      const compare=document.createElement("button");
+      compare.type="button";compare.className="story-navigate";
+      compare.textContent="Compare this arrangement ↔";
+      compare.disabled=diff===0||working;
+      compare.addEventListener("click",()=>comparePinnedCandidate(item));
+      const remove=document.createElement("button");
+      remove.type="button";remove.className="candidate-remove";
+      remove.textContent="Unpin";
+      remove.addEventListener("click",()=>{
+        trayDrafts.splice(i,1);
+        clearCandidatePreview("The unsealed alternative was discarded. Your draft is unchanged.");
+        drawTray();
+      });
+      actions.append(compare,remove);
+      card.append(name,metadata,actions);
+      $("candidate-collection").append(card);
+    });
+    $("candidate-save").disabled=trayDrafts.length>=4||working;
+  }
+  function touchDraft(reason){
+    clearCandidatePreview(reason);
+    if(!state?.storytable?.sealed)drawTray();
+  }
+  async function comparePinnedCandidate(entry){
+    if(working||!state?.paper||state.storytable?.sealed)return;
+    const old=cloneShotList(storyDraft);
+    const alt=cloneShotList(entry.shots);
+    const changed=alt.some((row,i)=>JSON.stringify(row)!==JSON.stringify(old[i]));
+    if(!changed){
+      $("candidate-status").textContent="This candidate is identical to the working draft.";
+      return;
+    }
+    const payload={
+      paperTraySha256:state.paper.paperTraySha256,
+      baseShots:old,candidateShots:alt,
+      compareOnly:true,allowStorySeal:false,allowMovieRender:false,
+      allowPublication:false,allowNetworkUpload:false,allowPaidProviders:false,
+    };
+    setBusy(true);
+    clearCandidatePreview("Rendering bounded actual pixels for the changed song windows…");
+    try{
+      const answer=await request("/api/porch/candidate/compare",payload);
+      const receipt=answer.receipt;
+      if(receipt.schema!=="vidmage/band-iq-013-temporary-candidate-tray/v1"||
+         receipt.totalChangedShotCount<1||
+         receipt.baseDraftSha256===receipt.candidateDraftSha256){
+        throw Error("Actual candidate versions did not verify.");
+      }
+      candidateEvidence={
+        receipt,old,alt,title:entry.title,
+        oldJson:JSON.stringify(old),altJson:JSON.stringify(alt),
+      };
+      $("candidate-comparison-grid").replaceChildren();
+      receipt.nativeComparisons.forEach((one,index)=>{
+        const card=document.createElement("div");
+        card.className="candidate-pair";
+        const title=document.createElement("strong");
+        title.textContent="SHOT "+String(one.shotIndex+1).padStart(2,"0")+
+          " · "+one.shotId;
+        const pair=document.createElement("div");
+        pair.className="candidate-pair-frames";
+        for(const side of ["left","right"]){
+          const panel=document.createElement("div");
+          const label=document.createElement("small");
+          label.textContent=side==="left"?"CURRENT DRAFT":"PINNED ALTERNATIVE";
+          panel.append(label);
+          const photos=document.createElement("div");
+          photos.className="candidate-three";
+          one[side].frames.forEach((frame,frameIndex)=>{
+            const button=document.createElement("button");
+            button.type="button";
+            const img=document.createElement("img");
+            img.src="/api/porch/candidate/frame/"+receipt.candidateSha256+
+              "/"+index+"/"+side+"/"+frameIndex;
+            img.alt=side+" authored real frame at "+frame.atSeconds.toFixed(2)+"s";
+            button.append(img);
+            button.addEventListener("click",()=>{
+              selectShot(one.shotIndex);
+              try{$("story-audio").currentTime=frame.atSeconds;}catch{}
+            });
+            photos.append(button);
+          });
+          panel.append(photos);pair.append(panel);
+        }
+        card.append(title,pair);
+        $("candidate-comparison-grid").append(card);
+      });
+      $("candidate-coverage").textContent=
+        "Compared "+receipt.observedShotCount+" of "+
+        receipt.totalChangedShotCount+" changed native song windows. "+
+        (receipt.omittedChangesUnjudged?
+          "Remaining changed windows have not been measured or judged.":"All changed windows sampled.")+
+        " No native movie has been made.";
+      $("candidate-comparison").hidden=false;
+      $("candidate-status").textContent=
+        "Both variants are still candidates. Apply the whole pinned arrangement only if you choose.";
+    }catch(e){
+      clearCandidatePreview(e.message||"Cannot compare these exact candidate sources.");
+    }finally{setBusy(false);drawTray();}
   }
 
   function drawFilmstrip(){
@@ -445,7 +653,114 @@
     ];
     $("story-protect").checked=shot.protectText;
     selectShot(activeShot);
+    touchDraft("Draft focus changed. Old candidate pixels are stale.");
   }
+  function guidePointer(event,canvasId,prefix){
+    if(state?.storytable?.sealed||working)return;
+    const box=$(canvasId).getBoundingClientRect();
+    const size=Number($(prefix+"-size").value);
+    const cx=(event.clientX-box.left)/box.width*100;
+    const cy=(event.clientY-box.top)/box.height*100;
+    if(!Number.isFinite(cx)||!Number.isFinite(cy))return;
+    $(""+prefix+"-x").value=String(
+      Math.min(100-size,Math.max(0,Math.round((cx-size/2)/5)*5)));
+    $(""+prefix+"-y").value=String(
+      Math.min(100-size,Math.max(0,Math.round((cy-size/2)/5)*5)));
+    refreshBitGuides();
+  }
+  for(const prefix of ["bit-grab","bit-cross"]){
+    for(const dimension of ["x","y","size"]){
+      $(prefix+"-"+dimension).addEventListener("input",refreshBitGuides);
+    }
+  }
+  $("bit-opacity").addEventListener("input",refreshBitGuides);
+  $("bit-source").addEventListener("change",refreshBitGuides);
+  $("bit-grab-guide").addEventListener("click",e=>
+    guidePointer(e,"bit-grab-guide","bit-grab"));
+  $("bit-cross-guide").addEventListener("click",e=>
+    guidePointer(e,"bit-cross-guide","bit-cross"));
+  $("bit-grab").addEventListener("click",()=>{
+    if(!state?.storytable||state.storytable.sealed)return;
+    grabbedBit={
+      sourceAssetId:$("bit-source").value,
+      crop:bitRectangle("bit-grab"),
+    };
+    $("bit-status").textContent=
+      "Piece grabbed. It remains an in-memory idea; no image has been changed.";
+  });
+  $("bit-cross").addEventListener("click",()=>{
+    if(!grabbedBit||!storyDraft||state?.storytable?.sealed){
+      $("bit-status").textContent="Grab a piece from an owned photograph first.";
+      return;
+    }
+    const bit={
+      sourceAssetId:grabbedBit.sourceAssetId,
+      crop:grabbedBit.crop.slice(),
+      place:bitRectangle("bit-cross"),
+      opacity:Number($("bit-opacity").value)/100,
+    };
+    if(!window.confirm(
+      "Cross this piece of owned imagery into the selected UNSEALED draft shot? "+
+      "Neither original changes. An actual crossed working image is created only "+
+      "after a separate human Storytable seal."))return;
+    storyDraft[activeShot].crossBit=bit;
+    selectShot(activeShot);
+    touchDraft("Crossed an owned fragment into the unsealed shot. "+
+      "Use THIS/THAT to inspect the actual resulting pixels.");
+    $("bit-status").textContent="Crossed into song shot "+(activeShot+1)+
+      ". Source and position will be preserved if the artist seals the Storytable.";
+  });
+  $("bit-uncross").addEventListener("click",()=>{
+    if(!storyDraft||state?.storytable?.sealed)return;
+    if(!storyDraft[activeShot].crossBit){
+      $("bit-status").textContent="No source fragment is crossed into this shot.";
+      return;
+    }
+    delete storyDraft[activeShot].crossBit;
+    selectShot(activeShot);
+    touchDraft("The crossed fragment was lifted from the unsealed draft.");
+    $("bit-status").textContent="Cross removed; owned source files stay unchanged.";
+  });
+  $("candidate-save").addEventListener("click",()=>{
+    if(!storyDraft||state?.storytable?.sealed||trayDrafts.length>=4)return;
+    const snap=cloneShotList(storyDraft);
+    if(trayDrafts.some(t=>JSON.stringify(t.shots)===JSON.stringify(snap))){
+      $("candidate-status").textContent="This precise arrangement is already pinned.";
+      return;
+    }
+    candidateNumber++;
+    trayDrafts.push({
+      title:"POSSIBILITY "+String(candidateNumber).padStart(2,"0"),
+      shots:snap,
+    });
+    $("candidate-status").textContent=
+      "Pinned the complete unsealed draft in session memory. No story or film created.";
+    drawTray();
+  });
+  $("candidate-apply").addEventListener("click",()=>{
+    const candidate=candidateEvidence;
+    if(!candidate||state?.storytable?.sealed||!storyDraft||
+       JSON.stringify(cloneShotList(storyDraft))!==candidate.oldJson){
+      clearCandidatePreview("The draft changed; compare again before applying.");
+      return;
+    }
+    if(!window.confirm(
+      "Apply the WHOLE selected alternative to the UNSEALED draft? "+
+      "No source image, signed story or published film will be altered. "+
+      "The Storytable must still be sealed separately."))return;
+    storyDraft=storyDraft.map((row,i)=>({
+      shotId:row.shotId,start:row.start,end:row.end,
+      ...JSON.parse(JSON.stringify(candidate.alt[i])),
+    }));
+    clearCandidatePreview("This candidate entered the draft. Nothing was sealed.");
+    contactShot=-1;
+    contactDraft=null;
+    selectShot(activeShot);
+    drawTray();
+  });
+  $("candidate-cancel").addEventListener("click",()=>{
+    clearCandidatePreview("No candidate applied; your draft is unchanged.");
+  });
   $("contact-image").addEventListener("change",contactControlsChanged);
   $("contact-x").addEventListener("input",contactControlsChanged);
   $("contact-y").addEventListener("input",contactControlsChanged);
@@ -473,6 +788,7 @@
            sourceAssetId:compared.left.sourceAssetId,
            focus:compared.left.focus,
            protectText:compared.left.protectText,
+           ...(compared.left.crossBit?{crossBit:compared.left.crossBit}:{}),
          })){
         throw Error("Comparison did not belong to the exact original draft.");
       }
@@ -506,9 +822,11 @@
       sourceAssetId:idea.right.sourceAssetId,
       focus:idea.right.focus.slice(),
       protectText:idea.right.protectText,
+      ...(idea.right.crossBit?{crossBit:JSON.parse(JSON.stringify(idea.right.crossBit))}:{}),
     };
     invalidateContact("Alternative applied to this on-screen draft only. Storytable still unsealed.");
     selectShot(activeShot);
+    touchDraft("Alternative entered your draft; no Storytable has been sealed.");
   });
   $("contact-leave").addEventListener("click",()=>{
     invalidateContact("Your original on-screen draft is unchanged. No comparison was applied.");
@@ -518,6 +836,7 @@
   $("story-protect").addEventListener("change",()=>{
     if(!storyDraft||state?.storytable?.sealed)return;
     storyDraft[activeShot].protectText=$("story-protect").checked;
+    touchDraft("Draft text treatment changed. Existing comparisons are stale.");
   });
   $("story-previous").addEventListener("click",()=>selectShot(activeShot-1));
   $("story-next").addEventListener("click",()=>selectShot(activeShot+1));
@@ -542,6 +861,7 @@
       shots:storyDraft.map(x=>({
         shotId:x.shotId,sourceAssetId:x.sourceAssetId,
         focus:x.focus.slice(),protectText:x.protectText,
+        ...(x.crossBit?{crossBit:JSON.parse(JSON.stringify(x.crossBit))}:{}),
       })),
       preserveOriginals:true,publish:false,
       allowPaidProviders:false,allowNetworkUpload:false,

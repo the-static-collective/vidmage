@@ -100,6 +100,61 @@
                 </div>
               </div>
             </div>
+            <section id="candidate-tray" class="candidate-tray" aria-labelledby="candidate-title">
+              <div class="receipt-strip">BAND-IQ 013 · HOLD MORE THAN ONE POSSIBILITY</div>
+              <div class="candidate-title-row">
+                <div>
+                  <h3 id="candidate-title">The candidate tray.</h3>
+                  <p>Keep a few alternate arrangements. Grab a piece from one owned photograph and cross it into another shot. Nothing leaves this unsealed workroom until you explicitly apply and later seal.</p>
+                </div>
+                <button type="button" id="candidate-save" class="secondary-comparison">Pin this draft to the tray <span aria-hidden="true">✳</span></button>
+              </div>
+              <div id="candidate-collection" class="candidate-collection" aria-label="Saved in-memory alternative arrangements"></div>
+              <div class="candidate-maker">
+                <div class="candidate-grabber">
+                  <div class="candidate-mini-heading">GRAB · A piece of an owned picture</div>
+                  <label for="bit-source">Where the piece comes from</label>
+                  <select id="bit-source"></select>
+                  <canvas id="bit-grab-guide" width="320" height="180" aria-label="Source photograph; tap to position a bounded square crop"></canvas>
+                  <small>Tap the picture to move the grab box, or use the sliders below.</small>
+                  <label for="bit-grab-x">Crop left <output id="bit-grab-x-out">25%</output></label>
+                  <input id="bit-grab-x" type="range" min="0" max="90" step="5" value="25"/>
+                  <label for="bit-grab-y">Crop down <output id="bit-grab-y-out">25%</output></label>
+                  <input id="bit-grab-y" type="range" min="0" max="90" step="5" value="25"/>
+                  <label for="bit-grab-size">Piece size <output id="bit-grab-size-out">30%</output></label>
+                  <input id="bit-grab-size" type="range" min="10" max="65" step="5" value="30"/>
+                  <button type="button" class="story-navigate" id="bit-grab">Grab this piece ↗</button>
+                </div>
+                <div class="candidate-crosser">
+                  <div class="candidate-mini-heading">CROSS · Into this song's selected shot</div>
+                  <canvas id="bit-cross-guide" width="320" height="180" aria-label="Target picture; tap to position the crossed fragment"></canvas>
+                  <small>Tap to place the fragment over the current shot's picture. The original pixels remain untouched.</small>
+                  <label for="bit-cross-x">Place across <output id="bit-cross-x-out">35%</output></label>
+                  <input id="bit-cross-x" type="range" min="0" max="90" step="5" value="35"/>
+                  <label for="bit-cross-y">Place down <output id="bit-cross-y-out">35%</output></label>
+                  <input id="bit-cross-y" type="range" min="0" max="90" step="5" value="35"/>
+                  <label for="bit-cross-size">Cross size <output id="bit-cross-size-out">30%</output></label>
+                  <input id="bit-cross-size" type="range" min="10" max="65" step="5" value="30"/>
+                  <label for="bit-opacity">Strength <output id="bit-opacity-out">80%</output></label>
+                  <input id="bit-opacity" type="range" min="10" max="100" step="5" value="80"/>
+                  <div class="candidate-buttons">
+                    <button type="button" id="bit-cross" class="secondary-comparison">Cross grabbed bit into shot ↗</button>
+                    <button type="button" id="bit-uncross" class="story-navigate">Lift bit back out</button>
+                  </div>
+                  <p id="bit-status" role="status" aria-live="polite">Nothing grabbed. Neither original source will be changed.</p>
+                </div>
+              </div>
+              <div id="candidate-comparison" hidden>
+                <div class="receipt-strip">YOUR DRAFT ↔ A PINNED ALTERNATIVE</div>
+                <p id="candidate-coverage"></p>
+                <div class="candidate-comparison-grid" id="candidate-comparison-grid"></div>
+                <div class="candidate-buttons">
+                  <button type="button" id="candidate-apply" class="primary">Apply selected candidate to draft ↗</button>
+                  <button type="button" id="candidate-cancel" class="story-navigate">Leave draft unchanged</button>
+                </div>
+              </div>
+              <p id="candidate-status" role="status" aria-live="polite">Candidates are held only while this local studio is open. No receipts, movies or source files are written by this tray.</p>
+            </section>
             <section id="contact-sheet" class="contact-sheet" aria-labelledby="contact-title">
               <div class="receipt-strip">BAND-IQ 012 · THE LITTLE WHAT-IF TABLE</div>
               <h3 id="contact-title">What if this moment looked another way?</h3>

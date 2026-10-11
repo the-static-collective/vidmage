@@ -234,6 +234,12 @@ class PorchNativeTests(unittest.TestCase):
                 "focus":[.25,.75] if i==0 else [.7,.3],
                 "protectText":i==0,
             } for i,r in enumerate(paper_plan["shots"])]
+            bit={
+                "sourceAssetId":images[0],
+                "crop":[.2,.2,.3,.3],
+                "place":[.4,.4,.3,.3],
+                "opacity":.85}
+            assignments[0]["crossBit"]=bit
             story_form={
                 "paperTraySha256":prepared["paperTraySha256"],
                 "operatorAttestationId":"actual-story-director-before-first-cut",
@@ -323,6 +329,69 @@ class PorchNativeTests(unittest.TestCase):
                 self.assertFalse(project.story_path.exists())
                 self.assertFalse(project.filmstrip_dir.exists())
                 self.assertFalse(list(project.root.rglob("*contact*.jpg")))
+                # 013: multiple changed shot candidates and a real
+                # grabbed/crossed source fragment are previewed in memory
+                # only; no permanent source bit until 010 author SEAL.
+                left_version=[{
+                    "shotId":r["id"],
+                    "sourceAssetId":images[i%len(images)],
+                    "focus":[.5,.5],"protectText":False,
+                } for i,r in enumerate(paper_plan["shots"])]
+                right_version=[{
+                    "shotId":row["shotId"],
+                    "sourceAssetId":row["sourceAssetId"],
+                    "focus":row["focus"],
+                    "protectText":row["protectText"],
+                    **({"crossBit":row["crossBit"]} if "crossBit" in row else {}),
+                } for row in assignments]
+                candidate_payload={
+                    "paperTraySha256":prepared["paperTraySha256"],
+                    "baseShots":left_version,
+                    "candidateShots":right_version,
+                    "compareOnly":True,
+                    "allowStorySeal":False,
+                    "allowMovieRender":False,
+                    "allowPublication":False,
+                    "allowNetworkUpload":False,
+                    "allowPaidProviders":False,
+                }
+                forged_candidate=Request(
+                    origin+"/api/porch/candidate/compare",
+                    data=json.dumps(candidate_payload).encode(),headers={
+                        "Origin":"https://forbidden.example",
+                        "X-Porch-Token":before_story["token"],
+                        "Content-Type":"application/json"})
+                with self.assertRaises(HTTPError) as outside_tray:
+                    urlopen(forged_candidate)
+                self.assertEqual(outside_tray.exception.code,403)
+                candidate_req=Request(
+                    origin+"/api/porch/candidate/compare",
+                    data=json.dumps(candidate_payload).encode(),headers={
+                        "Origin":origin,
+                        "X-Porch-Token":before_story["token"],
+                        "Content-Type":"application/json"})
+                with urlopen(candidate_req) as response:
+                    candidate_result=json.load(response)["receipt"]
+                self.assertEqual(
+                    candidate_result["schema"],
+                    "vidmage/band-iq-013-temporary-candidate-tray/v1")
+                self.assertFalse(candidate_result["storySaved"])
+                self.assertFalse(candidate_result["filmRendered"])
+                self.assertGreaterEqual(candidate_result["observedShotCount"],1)
+                self.assertFalse((project.tray/"cross-bits").exists())
+                for j,pair in enumerate(candidate_result["nativeComparisons"]):
+                    for side in ("left","right"):
+                        for frame_ix,frame in enumerate(pair[side]["frames"]):
+                            uri=(origin+"/api/porch/candidate/frame/"+
+                                 candidate_result["candidateSha256"]+"/"+
+                                 str(j)+"/"+side+"/"+str(frame_ix))
+                            with urlopen(uri) as response:
+                                content=response.read()
+                                self.assertEqual(response.headers["Content-Type"],
+                                                 "image/jpeg")
+                            import hashlib
+                            self.assertEqual(hashlib.sha256(content).hexdigest(),
+                                             frame["imageSha256"])
                 story_request=Request(
                     origin+"/api/porch/story/seal",
                     data=json.dumps(story_form).encode(),headers={
@@ -343,6 +412,22 @@ class PorchNativeTests(unittest.TestCase):
                     self.assertEqual(response.status,201)
                 sealed=story_answer["receipt"]
                 self.assertTrue(story_answer["state"]["storytable"]["sealed"])
+                self.assertIn("crossBit",sealed["shotAssignments"][0])
+                crossed=sealed["shotAssignments"][0]["crossBit"]
+                self.assertEqual(
+                    crossed["grabbedSourceAssetId"],images[0])
+                self.assertEqual(
+                    crossed["composedImageSha256"],
+                    __import__("hashlib").sha256(
+                      (project.tray/"cross-bits"/(crossed["bitSha256"]+".png"))
+                      .read_bytes()).hexdigest())
+                with self.assertRaises(HTTPError) as stale_candidate:
+                    urlopen(origin+"/api/porch/candidate/frame/"+
+                            candidate_result["candidateSha256"]+"/0/right/0")
+                self.assertEqual(stale_candidate.exception.code,404)
+                with self.assertRaises(HTTPError) as late_candidate:
+                    urlopen(candidate_req)
+                self.assertEqual(late_candidate.exception.code,409)
                 # Sealing is a separate crossing; stale unsealed comparison
                 # images are invalidated, never adopted as the saved story.
                 with self.assertRaises(HTTPError) as stale_image:

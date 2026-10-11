@@ -239,3 +239,48 @@ footer{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap;paddin
 #contact-digest{display:block;font:.67rem ui-monospace,monospace;color:#b2bea9;word-break:break-all}
 @media(max-width:800px){.contact-scratch,.contact-pair{grid-template-columns:1fr}}
 @media(max-width:530px){.contact-sheet{padding:15px}.contact-frame small{font-size:.59rem}}
+
+/* BAND-IQ 013 · source-fragment and multi-shot candidate worktable */
+.candidate-tray{margin:26px 0 33px;padding:clamp(16px,3vw,28px);background:linear-gradient(135deg,#334333,#1b2b24 75%);border:1px solid #afbd9a}
+.candidate-tray[hidden],#candidate-comparison[hidden]{display:none!important}
+.candidate-title-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:start;gap:20px}
+.candidate-title-row>div{flex:1 1 320px}
+.candidate-title-row h3{font:normal clamp(1.6rem,3vw,2.75rem)/1.1 Georgia,serif;color:#f3e3bf;margin:12px 0}
+.candidate-title-row p{font-size:.88rem;line-height:1.6;color:#c7d2c3;max-width:740px}
+.candidate-title-row button{margin-top:14px}
+.candidate-collection{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(225px,100%),1fr));gap:11px;margin:18px 0 22px}
+.candidate-empty{grid-column:1/-1;border:1px dashed #7f9981;padding:18px;color:#bdcdb5;font:italic 1rem Georgia,serif}
+.candidate-pinned{border:1px solid #9fb099;background:#203728;padding:17px;display:grid;gap:10px;align-content:space-between}
+.candidate-pinned strong{font:1.3rem Georgia,serif;color:#ecdcb2}
+.candidate-pinned small{font:.73rem/1.5 ui-monospace,monospace;color:#c6cfbd}
+.candidate-buttons{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.candidate-buttons button{cursor:pointer}
+.candidate-remove{font:700 .75rem ui-monospace,monospace;background:transparent;color:#e6c5af;border:1px solid #9c8068;padding:10px 13px;border-radius:3px}
+.candidate-remove:hover{background:#614b3b}
+.candidate-maker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin:24px 0}
+.candidate-grabber,.candidate-crosser{min-width:0;background:#25372b;border:1px solid #95a48c;padding:19px;display:grid;align-content:start;gap:9px}
+.candidate-mini-heading{font:700 .72rem ui-monospace,monospace;color:#ecd6a0;letter-spacing:.12em;margin-bottom:7px}
+.candidate-maker label:not(.tick){font-size:.76rem;color:#d6e1d1}
+.candidate-maker output{float:right;color:#e5ce99;font:700 .77rem ui-monospace,monospace}
+.candidate-maker select{min-height:39px;padding:8px;border:1px solid #8f9e83;background:#1c3024;color:#e5eddc}
+.candidate-maker canvas{display:block;max-width:100%;height:auto;width:100%;aspect-ratio:16/9;cursor:crosshair;border:3px solid #80967b;background:#12231a}
+.candidate-maker input[type=range]{width:100%;accent-color:#ddca8e}
+.candidate-maker small{font:.71rem/1.5 ui-monospace,monospace;color:#bbcbb4}
+.candidate-maker .story-navigate{justify-self:start}
+.candidate-maker .secondary-comparison{font-size:.78rem;padding:10px 12px}
+#bit-status{font:.77rem/1.6 ui-monospace,monospace;color:#d3d3ae;min-height:36px}
+#candidate-comparison{border-top:1px dashed #a7b49c;margin:28px 0 15px;padding-top:23px}
+#candidate-coverage{font:.84rem/1.6 ui-monospace,monospace;color:#d1d8c4}
+.candidate-comparison-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr));gap:14px;margin-bottom:23px}
+.candidate-pair{background:#182c20;border:1px solid #96aa88;padding:13px}
+.candidate-pair strong{font:1.05rem Georgia,serif;color:#e8daa8}
+.candidate-pair-frames{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.candidate-pair-frames>div{min-width:0}
+.candidate-pair-frames small{font:.62rem ui-monospace,monospace;color:#d8d3ad;letter-spacing:.05em}
+.candidate-three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;margin:7px 0 0}
+.candidate-three button{min-width:0;background:#192c21;border:1px solid #637e62;padding:2px;cursor:pointer}
+.candidate-three button:hover{border-color:#e5d29b}
+.candidate-three img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}
+#candidate-status{font:.76rem/1.6 ui-monospace,monospace;color:#c4d6b9}
+@media(max-width:850px){.candidate-maker{grid-template-columns:1fr}.candidate-comparison-grid{grid-template-columns:1fr}}
+@media(max-width:470px){.candidate-pair-frames{grid-template-columns:1fr}.candidate-title-row h3{font-size:2rem}}
