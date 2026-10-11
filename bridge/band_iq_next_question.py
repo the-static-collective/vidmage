@@ -239,7 +239,7 @@ def run_trial(bench, q, choice,plan,cards,observation,audio,asset_root,output):
     }
     output=Path(output).expanduser().resolve()
     need(not output.exists() and not output.with_suffix(".receipt.json").exists(),
-         "revision must not replace a prior movie or receipt")
+         "create-only revision must not replace a prior movie or receipt")
     render=film.render(plan,edited,observation,audio,asset_root,output,
                        kinetic=False,cinematic=cinematic)
     actual=donors.sha_file(output)
