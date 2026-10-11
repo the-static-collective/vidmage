@@ -25,6 +25,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Import existing VidMage source-verification modules
+        run: python -m pip install 'numpy>=1.26,<3' 'opencv-python-headless>=4.10,<5'
       - name: Prove review persistence, source refusal, media ranges and CSRF boundary
         run: python -m unittest -v tests/test_band_iq_review.py
       - name: Browser script and stdlib server syntax
