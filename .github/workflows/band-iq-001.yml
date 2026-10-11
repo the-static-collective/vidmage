@@ -1,0 +1,51 @@
+name: VIDMAGE BAND-IQ 001 Source-Pinned Evidence Loop
+on:
+  push:
+    branches: [experiment/band-iq-001-evidence-to-next-experiment]
+  pull_request:
+    paths:
+      - "bridge/band_iq*.py"
+      - "tests/test_band_iq*.py"
+      - "docs/BAND_IQ_001.md"
+      - ".github/workflows/band-iq-001.yml"
+permissions:
+  contents: read
+jobs:
+  pure-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Prove BAND-IQ is non-actuating and protects stillness
+        run: python -m unittest -v tests/test_band_iq.py tests/test_band_iq_donors.py
+      - name: Check native adapter and evidence syntax
+        run: python -m compileall -q bridge tests
+  pinned-blender-native:
+    needs: pure-evidence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch exact ancestral Blender donor, not default branch
+        run: |
+          git clone --quiet https://github.com/the-static-collective/the-haunted-blender.git donor-blender
+          git -C donor-blender checkout --detach cf0256a49ac8aa879cf2a044847d248177fcfad9
+          test "$(git -C donor-blender rev-parse HEAD)" = cf0256a49ac8aa879cf2a044847d248177fcfad9
+      - name: Install needed native image and movie dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install Pillow==12.1.1
+      - name: Actual native Blender 008f scan and BAND-IQ proof on synthetic MP4
+        env:
+          VIDMAGE_BLENDER_ROOT: ${{ github.workspace }}/donor-blender
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/donor-blender
+        run: python -m unittest -v tests/test_band_iq_donors.py
+      - name: Prevent user media or secrets from becoming test artifacts
+        run: |
+          test ! -d ./private
+          test ! -d ./media
