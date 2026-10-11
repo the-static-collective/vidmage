@@ -290,6 +290,51 @@ class PorchNativeTests(unittest.TestCase):
                 with self.assertRaises(HTTPError) as replay:
                     urlopen(story_request)
                 self.assertEqual(replay.exception.code,409)
+                # BAND-IQ 011: one independently requested visual sketch,
+                # NOT a movie. Its sampled frames must be actual native
+                # raster output from the sealed, human-authored cards.
+                frame_choice={
+                    "storySha256":sealed["storySha256"],
+                    "makeLocalSketch":True,
+                    "acknowledgeSketchNotFilm":True,
+                    "allowNetworkUpload":False,
+                    "allowPaidProviders":False,
+                    "allowPublication":False,
+                }
+                bad=Request(origin+"/api/porch/filmstrip/make",
+                            data=json.dumps(frame_choice).encode(),headers={
+                     "Origin":"https://untrusted.example",
+                     "X-Porch-Token":before_story["token"],
+                     "Content-Type":"application/json"})
+                with self.assertRaises(HTTPError) as not_author:
+                    urlopen(bad)
+                self.assertEqual(not_author.exception.code,403)
+                self.assertFalse(project.filmstrip_dir.exists())
+                req=Request(origin+"/api/porch/filmstrip/make",
+                            data=json.dumps(frame_choice).encode(),headers={
+                     "Origin":origin,"X-Porch-Token":before_story["token"],
+                     "Content-Type":"application/json"})
+                with urlopen(req) as response:
+                    sketch_response=json.load(response)
+                    self.assertEqual(response.status,201)
+                sketch=sketch_response["receipt"]
+                self.assertFalse(sketch["movieGenerated"])
+                self.assertFalse(sketch["published"])
+                self.assertEqual(sketch["sourceStorySha256"],sealed["storySha256"])
+                self.assertTrue(sketch_response["state"]["filmstrip"]["ready"])
+                self.assertFalse(project.profile_path.exists())
+                self.assertFalse(list(project.films.glob("*.mp4")))
+                still=project.filmstrip_dir/sketch[
+                    "sampledActualRasterShots"][0]["frames"][1]["file"]
+                with urlopen(origin+"/api/porch/filmstrip/frame/0/1") as response:
+                    self.assertEqual(response.headers["Content-Type"],"image/jpeg")
+                    self.assertEqual(response.read(),still.read_bytes())
+                with self.assertRaises(HTTPError) as no_frame:
+                    urlopen(origin+"/api/porch/filmstrip/frame/99/0")
+                self.assertEqual(no_frame.exception.code,404)
+                # Repeat readback of the same evidence does NOT rerender.
+                with urlopen(req) as response:
+                    self.assertEqual(json.load(response)["receipt"],sketch)
             finally:
                 author_server.shutdown()
                 author_server.server_close()
@@ -331,6 +376,9 @@ class PorchNativeTests(unittest.TestCase):
                 self.assertFalse(output["receipt"]["selectedForKeep"])
                 self.assertEqual(output["receipt"]["sourceStorySha256"],sealed["storySha256"])
                 self.assertEqual(output["receipt"]["authoredCardsSha256"],sealed["authoredCardsSha256"])
+                self.assertEqual(output["receipt"]["sourceFilmstripSha256"],
+                                 sketch["filmstripSha256"])
+                self.assertEqual(project.verify_filmstrip(),sketch)
                 self.assertEqual(project.workbench.profile["nextSources"]["cards"],
                                  str(project.story_cards_path))
                 self.assertTrue(project.profile_path.is_file())
@@ -380,6 +428,9 @@ class PorchNativeTests(unittest.TestCase):
                     toaster_root=os.environ["VIDMAGE_TOASTER_ROOT"],
                     playdeck_root=os.environ["VIDMAGE_PLAYDECK_ROOT"])
                 self.assertEqual(reopened.state()["stage"],"films-ready")
+                self.assertEqual(reopened.verify_filmstrip(),sketch)
+                self.assertEqual(reopened.verify_completed()["sourceFilmstripSha256"],
+                                 sketch["filmstripSha256"])
                 self.assertEqual(reopened.workbench.state()["firstReviewDecision"],
                                  "KEEP_PLAYDECK")
                 self.assertEqual(reopened.verify_completed(),
