@@ -85,10 +85,15 @@ class BandIQ002PureTest(unittest.TestCase):
             self.assertEqual(native_still["sourceSha256"],owned_source_hash)
             material=material_surface.materialize_asset(
                 native_still["path"],root/"clay.png","clay")
-            Image.new("RGB",(220,124),(34,72,110)).save(root/"quiet.png")
+            from PIL import ImageDraw
+            second=Image.new("RGB",(220,124),(34,72,110))
+            draw=ImageDraw.Draw(second)
+            draw.ellipse((35,12,165,100),outline=(241,225,197),width=7)
+            draw.line((8,108,210,14),fill=(193,207,226),width=4)
+            second.save(root/"quiet.png")
             cards_assets={
                 "clay":{"path":"clay.png","mode":"subject","focus":[.5,.5]},
-                "quiet":{"path":"quiet.png","mode":"protect-text","focus":[.5,.5]},
+                "quiet":{"path":"quiet.png","mode":"subject","focus":[.5,.5]},
             }
             audio=root/"music.wav"
             subprocess.run(["ffmpeg","-nostdin","-v","error","-f","lavfi",
