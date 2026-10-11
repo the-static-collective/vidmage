@@ -21,6 +21,8 @@
     "band-iq:question-proof": "python3 -m unittest -v tests/test_band_iq_next_question.py",
     "band-iq:question-help": "python3 -m bridge.band_iq_next_question --help",
     "band-iq:lab-proof": "python3 -m unittest -v tests/test_band_iq_question_lab.py",
-    "band-iq:lab-help": "python3 -m bridge.band_iq_question_lab --help"
+    "band-iq:lab-help": "python3 -m bridge.band_iq_question_lab --help",
+    "band-iq:ac-proof": "python3 -m unittest -v tests/test_band_iq_ac_review.py",
+    "band-iq:ac-room": "python3 -m bridge.band_iq_ac_review --help"
   }
 }
