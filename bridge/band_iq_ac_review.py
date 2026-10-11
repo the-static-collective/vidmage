@@ -230,12 +230,29 @@ class ACReviewBench:
              "previous A/C review record is tampered")
         need(result.get("decision") in DECISIONS and
              result.get("outcome")==DECISIONS[result["decision"]] and
+             result.get("source004ReviewSha256")==self.pair["source004ReviewSha256"] and
+             result.get("source005RevisionSha256")==self.pair["source005RevisionSha256"] and
+             result.get("source006ObservationSha256")==self.pair["source006ObservationSha256"] and
+             result.get("humanQuestionVerbatim")==self.pair["humanQuestionVerbatim"] and
+             result.get("measurementsUsedAsAuthorChoice") is False and
+             result.get("originalReviewRewritten") is False and
              result.get("autoExecute") is False and
              result.get("autoKeep") is False and
              result.get("publicationAuthorized") is False and
+             result.get("exportAuthorized") is False and
              result.get("sourceFilesModified") is False and
              result.get("nextExperimentPerformed") is False,
-             "A/C review cannot silently publish or execute edits")
+             "A/C review cannot cross prior evidence or silently publish/execute edits")
+        iq.bounded(result.get("operatorAttestationId"),
+                   "A/C review needs its own operator attestation",256)
+        question=result.get("newHumanQuestion")
+        need(isinstance(question,str) and len(question)<=1200,
+             "recorded A/C question must remain author-authored and bounded")
+        if result["decision"]=="ASK_ANOTHER_QUESTION":
+            iq.bounded(question,"A/C human question cannot be empty",1200)
+        else:
+            need(not question.strip(),
+                 "A/C review cannot smuggle an unapproved follow-up question")
         expected=(
             "a" if result["decision"]=="CONTINUE_ORIGINAL" else
             "c" if result["decision"]=="CONTINUE_REVISION" else None)
