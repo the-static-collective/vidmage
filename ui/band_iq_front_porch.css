@@ -180,3 +180,27 @@ footer{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap;paddin
 .story-span-3{flex-grow:3}
 .story-span-4{flex-grow:4}
 .story-span-5{flex-grow:5}
+
+/* BAND-IQ 011: source-real sampled frames, visually different from finished movies. */
+.living-filmstrip{border:1px solid #aab38e;background:linear-gradient(160deg,#21362a,#14271f);padding:clamp(14px,2.5vw,27px);margin:27px 0}
+.living-filmstrip[hidden],#filmstrip-results[hidden],#filmstrip-prompt[hidden]{display:none!important}
+.sketch-header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:16px;margin:10px 0 21px}
+.sketch-header>div{flex:1 1 330px}
+.sketch-header h3{margin:8px 0;font:normal clamp(1.35rem,3vw,2.4rem)/1.15 Georgia,serif;color:#f2e7c6}
+.sketch-header p{margin:8px 0;max-width:670px;font-size:.86rem;line-height:1.65;color:#b7ccb7}
+.sketch-seal{display:inline-flex;background:#e1cd93;color:#283d2c;align-items:center;padding:10px;transform:rotate(2deg);font:700 .62rem ui-monospace,monospace;letter-spacing:.12em}
+#filmstrip-prompt{display:grid;justify-items:start;gap:10px}
+#filmstrip-prompt small{font-size:.72rem;line-height:1.6;max-width:650px;color:#bfceb7}
+.filmstrip-detail{font:.86rem/1.5 Georgia,serif;color:#e2dcc2;max-width:720px;margin-bottom:20px}
+.filmstrip-reel{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr));gap:15px;max-height:880px;overflow-y:auto}
+.filmstrip-group{padding:10px 12px 14px;background:#2e4535;border:1px solid #8e9f84;box-shadow:4px 4px 0 #15271c}
+.filmstrip-mark{font:700 .64rem/1.6 ui-monospace,monospace;letter-spacing:.08em;color:#e9d6a2;border-bottom:1px dashed #809983;padding-bottom:7px;margin-bottom:12px}
+.filmstrip-triplet{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.filmstrip-frame{position:relative;display:block;border:2px solid #111e17;padding:4px;background:#14251a;color:#e7e2c9;text-align:center;cursor:pointer;min-width:0;overflow:hidden}
+.filmstrip-frame:hover{border-color:#efd69d;background:#364a37}
+.filmstrip-frame img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;filter:saturate(.9)}
+.filmstrip-frame:hover img{filter:saturate(1.06)}
+.filmstrip-frame small{font:.65rem ui-monospace,monospace;display:block;padding:7px 2px 2px}
+.sketch-caution{color:#c4d4bb;line-height:1.55;font-size:.8rem;margin:20px 0 10px}
+#filmstrip-sha{word-break:break-all;font:.68rem ui-monospace,monospace;color:#a7ba9f;padding-top:10px;border-top:1px dashed #718473}
+@media(max-width:600px){.filmstrip-reel{grid-template-columns:1fr}.filmstrip-frame small{font-size:.58rem}}

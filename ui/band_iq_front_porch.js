@@ -14,7 +14,7 @@
   function message(text){$("feedback").textContent=String(text);}
   function setBusy(active){
     working=active;
-    for(const id of ["song","photos","accept","prepare","make","story-seal"])$(id).disabled=active;
+    for(const id of ["song","photos","accept","prepare","make","story-seal","make-filmstrip"])$(id).disabled=active;
   }
   async function request(route,body,options={}){
     const headers={"X-Porch-Token":state.token};
@@ -162,6 +162,63 @@
     if(table.sealed){
       $("story-sha").textContent="Storytable receipt SHA-256 "+table.storySha256;
     }
+    drawFilmstrip();
+  }
+
+  function drawFilmstrip(){
+    const table=state?.storytable;
+    const sketch=state?.filmstrip;
+    const visible=!!table?.sealed;
+    $("living-filmstrip").hidden=!visible;
+    if(!visible||!sketch)return;
+    $("filmstrip-prompt").hidden=sketch.ready;
+    $("filmstrip-results").hidden=!sketch.ready;
+    if(!sketch.ready)return;
+    const total=sketch.totalNativeShotCount;
+    $("filmstrip-detail").textContent=
+      "The native raster engine made "+sketch.sampledWindowCount+
+      " small sets of three real frames. You can compare the beginning, middle and end of each sampled shot.";
+    $("filmstrip-coverage").textContent=sketch.limitedSampling?
+      "A bounded visual survey: "+sketch.sampledWindowCount+" of "+total+
+      " song windows sampled evenly. Missing windows have NOT been rejected or judged.":
+      "All "+total+" native song windows sampled, three source-real stills apiece. "+
+      "The frames do not reproduce a moving camera or predict the independent Playdeck performance.";
+    $("filmstrip-sha").textContent="Private sketch receipt SHA-256 "+sketch.filmstripSha256;
+    $("filmstrip-reel").replaceChildren();
+    sketch.frames.forEach((row,i)=>{
+      const group=document.createElement("div");
+      group.className="filmstrip-group";
+      const header=document.createElement("div");
+      header.className="filmstrip-mark";
+      header.textContent="SHOT "+String(row.shotIndex+1).padStart(2,"0")+
+        " · "+row.start.toFixed(1)+"–"+row.end.toFixed(1)+" s"+
+        (row.protectText?" · TEXT PROTECTED":"");
+      group.append(header);
+      const triplet=document.createElement("div");
+      triplet.className="filmstrip-triplet";
+      row.samples.forEach((sample,j)=>{
+        const button=document.createElement("button");
+        button.type="button";button.className="filmstrip-frame";
+        button.setAttribute("aria-label",
+          "Hear the song at "+sample.atSeconds.toFixed(2)+
+          " seconds and select Storytable shot "+(row.shotIndex+1));
+        const image=document.createElement("img");
+        image.loading="lazy";
+        image.src=sample.url;image.alt=
+          "Real VidMage still from shot "+(row.shotIndex+1)+
+          " at "+sample.atSeconds.toFixed(2)+" seconds";
+        const caption=document.createElement("small");
+        caption.textContent=sample.atSeconds.toFixed(2)+"s";
+        button.append(image,caption);
+        button.addEventListener("click",()=>{
+          selectShot(row.shotIndex);
+          try{$("story-audio").currentTime=sample.atSeconds;}catch{}
+        });
+        triplet.append(button);
+      });
+      group.append(triplet);
+      $("filmstrip-reel").append(group);
+    });
   }
 
   function render() {
@@ -338,6 +395,29 @@
       render();
       message("Your Storytable is sealed. Now you can choose a camera language.");
     }catch(error){message(error.message||"The source arrangement was not accepted.");}
+    finally{setBusy(false);}
+  });
+
+  $("make-filmstrip").addEventListener("click",async()=>{
+    if(working||!state?.storytable?.sealed||state.films)return;
+    const yes=window.confirm(
+      "Develop a private filmstrip of sampled actual VidMage raster frames from "+
+      "your SEALED Storytable? This is not a rendered moving film and does not "+
+      "authorize external uploads, provider cost, KEEP or publication.");
+    if(!yes)return;
+    setBusy(true);
+    message("Developing a few actual source-bound frames from the author-sealed table…");
+    try{
+      const form={
+        storySha256:state.storytable.storySha256,
+        makeLocalSketch:true,
+        acknowledgeSketchNotFilm:true,
+        allowNetworkUpload:false,allowPaidProviders:false,allowPublication:false,
+      };
+      await request("/api/porch/filmstrip/make",form);
+      render();
+      message("Your sourced sketch is developed; each still has its own time and SHA.");
+    }catch(error){message(error.message||"The local sketch could not be verified.");}
     finally{setBusy(false);}
   });
 

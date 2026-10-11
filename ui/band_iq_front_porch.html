@@ -110,6 +110,26 @@
               <strong>Your story is held.</strong> The first timed arrangement is sealed. The next choice is how the camera moves.
               <span id="story-sha" class="mono"></span>
             </div>
+            <section id="living-filmstrip" class="living-filmstrip" hidden aria-labelledby="filmstrip-title">
+              <div class="receipt-strip">BAND-IQ 011 · A SKETCH YOU CAN ACTUALLY SEE</div>
+              <div class="sketch-header">
+                <div>
+                  <h3 id="filmstrip-title">A few moments from the film that isn't here yet.</h3>
+                  <p>Real frames sampled from your sealed shot arrangement. This is the native VidMage image treatment, before movie encoding, cinematic cameras or the Playdeck performance. Still pictures aren't a finished moving film.</p>
+                </div>
+                <span class="sketch-seal">SKETCH ≠ PERFORMANCE</span>
+              </div>
+              <div id="filmstrip-prompt">
+                <button id="make-filmstrip" type="button" class="primary">Develop my living filmstrip <span aria-hidden="true">↗</span></button>
+                <small>Generates only bounded private still frames. No video, audio remix, provider cost, KEEP or publication.</small>
+              </div>
+              <div id="filmstrip-results" hidden>
+                <div id="filmstrip-detail" class="filmstrip-detail" role="status"></div>
+                <div class="filmstrip-reel" id="filmstrip-reel" aria-label="Actual sampled preview frames; choose one to seek through the song"></div>
+                <p id="filmstrip-coverage" class="sketch-caution"></p>
+                <div id="filmstrip-sha" class="mono"></div>
+              </div>
+            </section>
           </section>
           <div id="camera-step" hidden>
           <h3>How should the camera feel?</h3>
