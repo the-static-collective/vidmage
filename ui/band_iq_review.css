@@ -54,3 +54,17 @@ textarea,input[type=text]{display:block;width:100%;font:inherit;font-size:.96rem
 footer{margin:30px 0;text-align:center;color:#97a69a;font-size:.76rem}
 @media(max-width:800px){main{width:min(96vw,700px);padding-top:18px}.review-grid{grid-template-columns:1fr}.decision{padding:18px}fieldset#decision-options{grid-template-columns:1fr}.audio-select legend{float:none}.transport{align-items:flex-start}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+/* BAND-IQ 005 — the human's next question, separate from the sealed review */
+#next-lab{border-color:#a1b594;background:#20342a}
+#next-lab[hidden],#next-lab [hidden]{display:none!important}
+#next-question-text{font-family:Georgia,ui-serif,serif;font-size:1.25rem;color:#f1e5c3}
+#next-form{display:grid;gap:12px}
+#next-operations{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;border:0;padding:0;margin:6px 0}
+#next-form>label,#next-form>div>label{display:block;color:#d6e4d3;font-size:.89rem;font-weight:650}
+#next-form>div{display:grid;gap:7px}
+#next-form select,#next-form input[type=number],#next-form input[type=text]{width:100%;padding:11px;background:#101d17;color:#edf1df;border:1px solid #829784;border-radius:5px;font:inherit}
+#next-form input:disabled{opacity:.55}
+#next-feedback{color:#d9dac2;font-size:.9rem}
+#next-video{border:1px solid #a1b594;border-radius:6px}
+@media(max-width:900px){#next-operations{grid-template-columns:1fr}}

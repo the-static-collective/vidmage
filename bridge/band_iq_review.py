@@ -95,6 +95,8 @@ class ReviewBench:
         self.fingerprints={
             side:self._fingerprint(path) for side,path in self.videos.items()
         }
+        self.next_sources=None
+        self.next_result=None
         self.get_decision()  # early refusal if a preexisting receipt is corrupted
 
     @staticmethod
@@ -129,6 +131,37 @@ class ReviewBench:
              "human review record claims unauthorized outcome")
         return receipt
 
+    def enable_next_sources(self, *,plan,cards,observation,audio,asset_root):
+        # An explicit local operator CLI action supplies the context. Viewing
+        # an earlier review cannot infer permission or fetch media from elsewhere.
+        self.next_sources=(read(plan),read(cards),read(observation),audio,asset_root)
+        # Only validate executable source state once an actual next-question review exists.
+        if (self.get_decision() or {}).get("decision")=="ANOTHER_EXPERIMENT":
+            self.next_question_set()
+
+    def next_question_set(self):
+        need(self.next_sources is not None,
+             "review room needs explicit local project inputs for next questions")
+        from . import band_iq_next_question as nxt
+        result=nxt.question_set(self,*self.next_sources)
+        iq.write_once(self.root/"next-question-proposals",result,"questionSetSha256")
+        return result
+
+    def next_execute(self,selection):
+        need(self.next_sources is not None,"next experiment sources are not configured")
+        from . import band_iq_next_question as nxt
+        with self._mutex:
+            questions=self.next_question_set()
+            # One local confirmed action produces at most one distinct output
+            # in its own source-addressed destination, without touching either old film.
+            prefix=questions["questionSetSha256"][:18]+"-"+iq.digest(selection)[:16]
+            destination=self.root/"next-trials"/(prefix+".mp4")
+            record,path=nxt.run_trial(self,questions,selection,*self.next_sources,destination)
+            self.next_result={"revisionRecord":path,"film":str(destination),
+                              "movieSha256":record["newMovieSha256"],
+                              "revisionSha256":record["revisionSha256"]}
+            return self.next_result
+
     def state(self):
         current=self.get_decision()
         proposal=next(p for p in self.cycle["imagine"]
@@ -155,7 +188,8 @@ class ReviewBench:
             "decision":current,
             "constraints":{"keepMeans":"chosen for further local continuation, NOT publication",
                            "publication":False,"export":False,"automaticEdit":False,
-                           "creativeJudgmentByScore":False},
+                           "creativeJudgmentByScore":False,
+                           "nextQuestionToolsConfigured":self.next_sources is not None},
         }
 
     def commit(self,form):
@@ -258,7 +292,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def _video(self,side):
         try:
-            path=self.bench.require_unchanged(side)
+            if side=="next":
+                trial=self.bench.next_result
+                need(isinstance(trial,dict),"no independently performed next trial")
+                path=Path(trial["film"]).resolve(strict=True)
+                need(path.is_file() and donors.sha_file(path)==trial["movieSha256"],
+                     "next trial file changed")
+            else:
+                path=self.bench.require_unchanged(side)
             length=path.stat().st_size
             need(length>0,"empty movie cannot be reviewed")
         except (OSError,ValueError):
@@ -316,13 +357,21 @@ class Handler(BaseHTTPRequestHandler):
         path=urlsplit(self.path).path
         if path=="/api/context":
             self._json(200,self.bench.state())
-        elif path in ("/media/a","/media/b"):
+        elif path=="/api/next/questions":
+            try:
+                question=self.bench.next_question_set()
+                self._json(200,{"ok":True,"questions":question,
+                                "trial":self.bench.next_result})
+            except (ValueError,KeyError,OSError,TypeError):
+                self._error(409,"next questions unavailable until human review and exact sources")
+        elif path in ("/media/a","/media/b","/media/next"):
             self._video(path.rsplit("/",1)[-1])
         else:
             self._static(path)
 
     def do_POST(self):
-        if urlsplit(self.path).path!="/api/decision":
+        path=urlsplit(self.path).path
+        if path not in ("/api/decision","/api/next/execute"):
             self._error(404,"unknown route")
             return
         # The loopback address alone does NOT establish CSRF or creator authorization.
@@ -342,8 +391,14 @@ class Handler(BaseHTTPRequestHandler):
                 self._error(413,"review form too large or empty")
                 return
             data=json.loads(self.rfile.read(length))
-            receipt=self.bench.commit(data)
-            self._json(201,{"ok":True,"receipt":receipt})
+            if path=="/api/decision":
+                receipt=self.bench.commit(data)
+                self._json(201,{"ok":True,"receipt":receipt})
+            else:
+                need(isinstance(data,dict) and set(data)=={"authorization"},
+                     "next execution needs one explicit authorization")
+                result=self.bench.next_execute(data["authorization"])
+                self._json(201,{"ok":True,"trial":result})
         except (ValueError,TypeError,KeyError,OSError,UnicodeError) as exc:
             self._error(409,"review refused; check explicit choice and source integrity")
 
@@ -367,6 +422,8 @@ def cli():
     for field in ("cycle","selection","vidmage-record","vidmage-movie",
                   "playdeck-receipt","playdeck-movie","record-dir"):
         p.add_argument("--"+field,required=True)
+    for field in ("next-plan","next-cards","next-observation","next-audio","next-asset-root"):
+        p.add_argument("--"+field)
     p.add_argument("--port",type=int,default=8764)
     p.add_argument("--open-browser",action="store_true")
     args=p.parse_args()
@@ -374,6 +431,14 @@ def cli():
         vidmage_record=args.vidmage_record,vidmage_movie=args.vidmage_movie,
         playdeck_receipt=args.playdeck_receipt,playdeck_movie=args.playdeck_movie,
         record_dir=args.record_dir)
+    optional=[args.next_plan,args.next_cards,args.next_observation,
+              args.next_audio,args.next_asset_root]
+    need(all(v is None for v in optional) or all(v is not None for v in optional),
+         "supply all five next-question project inputs or none")
+    if all(v is not None for v in optional):
+        bench.enable_next_sources(plan=args.next_plan,cards=args.next_cards,
+                                  observation=args.next_observation,audio=args.next_audio,
+                                  asset_root=args.next_asset_root)
     http=serve(bench,args.port,open_browser=args.open_browser)
     try:
         http.serve_forever()

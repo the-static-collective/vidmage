@@ -86,6 +86,50 @@
       <div class="hash" id="sealed-receipt"></div>
     </div>
   </section>
+  <section id="next-lab" class="decision" hidden aria-labelledby="next-heading">
+    <div class="eyebrow">BAND-IQ 005 · THE NEXT QUESTION</div>
+    <h2 id="next-heading">Make one small experiment.</h2>
+    <p id="next-question-text"></p>
+    <p>These are three mechanical possibilities, <strong>not interpretations of your words</strong>. You choose the operation, its scope, and whether to make one local trial. Your existing films and review remain untouched.</p>
+    <form id="next-form">
+      <fieldset id="next-operations">
+        <legend>Choose one bounded experiment</legend>
+        <label class="choice"><input type="radio" name="next-operation" value="SWAP_CARD" required><span><strong>Try another image</strong><small>One shot, another already-authorized image</small></span></label>
+        <label class="choice"><input type="radio" name="next-operation" value="REFOCUS_CARD"><span><strong>Reframe one shot</strong><small>Same image, newly selected focal point</small></span></label>
+        <label class="choice"><input type="radio" name="next-operation" value="CHANGE_LENS"><span><strong>Change the camera language</strong><small>Same selected time window, another lens</small></span></label>
+      </fieldset>
+      <div id="next-shot-fields" hidden>
+        <label for="next-shot">Which authored shot?</label>
+        <select id="next-shot"></select>
+      </div>
+      <div id="next-replacement-fields" hidden>
+        <label for="next-replacement">Use which existing image?</label>
+        <select id="next-replacement"></select>
+      </div>
+      <div id="next-focus-fields" hidden>
+        <label for="next-focus-x">New focus · horizontal (0.1–0.9)</label>
+        <input id="next-focus-x" type="number" value="0.75" min="0.1" max="0.9" step="0.05">
+        <label for="next-focus-y">New focus · vertical (0.1–0.9)</label>
+        <input id="next-focus-y" type="number" value="0.65" min="0.1" max="0.9" step="0.05">
+      </div>
+      <div id="next-lens-fields" hidden>
+        <label for="next-lens">Which new cinematic lens?</label>
+        <select id="next-lens"></select>
+      </div>
+      <label for="next-operator">New independent creator attestation <small>Required for this one trial</small></label>
+      <input id="next-operator" type="text" maxlength="256" autocomplete="off" required placeholder="Name or locally chosen review ID">
+      <label class="acknowledge"><input id="next-acknowledge" type="checkbox" required><span>I explicitly approve one owner-local trial. I understand the question itself did not authorize execution, and this will not KEEP, export, or publish the result.</span></label>
+      <button type="submit" class="commit" id="next-commit">Render this one experiment</button>
+    </form>
+    <p id="next-feedback" role="status" aria-live="polite"></p>
+    <div id="next-result" class="sealed" hidden>
+      <div class="eyebrow">NEW LOCAL TRIAL · NOT KEPT</div>
+      <h3>A third film exists.</h3>
+      <p>Its source question, single change, original films, and editable scene cards have separate receipts.</p>
+      <video id="next-video" controls playsinline preload="metadata" aria-label="Newly rendered author-selected trial film"></video>
+      <div id="next-sha" class="hash"></div>
+    </div>
+  </section>
   <footer>VIDMAGE / BAND-IQ · Local bench only · View ≠ KEEP · Selection ≠ publication · Quiet ≠ weak</footer>
 </main>
 </body>

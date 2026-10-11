@@ -17,6 +17,8 @@
     "band-iq:playdeck-proof": "python3 -m unittest -v tests/test_band_iq_playdeck_native.py",
     "band-iq:playdeck-help": "python3 -m bridge.band_iq_playdeck_native --help",
     "band-iq:review-proof": "python3 -m unittest -v tests/test_band_iq_review.py",
-    "band-iq:review-room": "python3 -m bridge.band_iq_review --help"
+    "band-iq:review-room": "python3 -m bridge.band_iq_review --help",
+    "band-iq:question-proof": "python3 -m unittest -v tests/test_band_iq_next_question.py",
+    "band-iq:question-help": "python3 -m bridge.band_iq_next_question --help"
   }
 }
