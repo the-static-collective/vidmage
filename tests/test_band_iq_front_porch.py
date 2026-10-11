@@ -234,6 +234,15 @@ class PorchNativeTests(unittest.TestCase):
                 "focus":[.25,.75] if i==0 else [.7,.3],
                 "protectText":i==0,
             } for i,r in enumerate(paper_plan["shots"])]
+            # A physical rectangular source bit is grabbed from the OTHER
+            # owned photo and crossed onto shot one, with the original kept.
+            actual_bit={
+                "sourceAssetId":images[0],
+                "grab":[.1,.1,.4,.4],
+                "place":[.3,.25,.45,.5],
+                "opacity":.85,
+            }
+            assignments[0]["crosses"]=[actual_bit]
             story_form={
                 "paperTraySha256":prepared["paperTraySha256"],
                 "operatorAttestationId":"actual-story-director-before-first-cut",
@@ -323,6 +332,55 @@ class PorchNativeTests(unittest.TestCase):
                 self.assertFalse(project.story_path.exists())
                 self.assertFalse(project.filmstrip_dir.exists())
                 self.assertFalse(list(project.root.rglob("*contact*.jpg")))
+                # 013 grabs a bounded owned-picture rectangle into one
+                # altered shot. Preview both sides over the SAME music:
+                # six real JPEGs, no derived file until human story seal.
+                left={"sourceAssetId":assignments[0]["sourceAssetId"],
+                      "focus":assignments[0]["focus"],
+                      "protectText":assignments[0]["protectText"],
+                      "crosses":[]}
+                right={**left,"crosses":[actual_bit]}
+                crossing={
+                    "paperTraySha256":prepared["paperTraySha256"],
+                    "shotId":paper_plan["shots"][0]["id"],
+                    "left":left,"right":right,"compareOnly":True,
+                    "allowStorySeal":False,"allowMovieRender":False,
+                    "allowNetworkUpload":False,
+                    "allowPaidProviders":False,"allowPublication":False,
+                }
+                cross_request=Request(
+                    origin+"/api/porch/cross/compare",
+                    data=json.dumps(crossing).encode(),headers={
+                        "Origin":origin,
+                        "X-Porch-Token":before_story["token"],
+                        "Content-Type":"application/json"})
+                attacked_cross=Request(
+                    origin+"/api/porch/cross/compare",
+                    data=json.dumps(crossing).encode(),headers={
+                        "Origin":"https://elsewhere.invalid",
+                        "X-Porch-Token":before_story["token"],
+                        "Content-Type":"application/json"})
+                with self.assertRaises(HTTPError) as outside_cross:
+                    urlopen(attacked_cross)
+                self.assertEqual(outside_cross.exception.code,403)
+                with urlopen(cross_request) as response:
+                    response_data=json.load(response)
+                    self.assertEqual(response.status,201)
+                source_preview=response_data["receipt"]
+                self.assertEqual(source_preview["schema"],
+                                 "vidmage/band-iq-013-crossed-bits-contact/v1")
+                self.assertNotEqual(source_preview["left"]["frames"][1]["imageSha256"],
+                                    source_preview["right"]["frames"][1]["imageSha256"])
+                for side in ("left","right"):
+                    url=(origin+"/api/porch/contact/frame/"+
+                         source_preview["comparisonSha256"]+"/"+side+"/1")
+                    with urlopen(url) as response:
+                        shot_sample=response.read()
+                    import hashlib
+                    self.assertEqual(hashlib.sha256(shot_sample).hexdigest(),
+                                     source_preview[side]["frames"][1]["imageSha256"])
+                self.assertFalse((project.tray/"crossed-bits").exists())
+                self.assertFalse(project.story_path.exists())
                 story_request=Request(
                     origin+"/api/porch/story/seal",
                     data=json.dumps(story_form).encode(),headers={
@@ -343,6 +401,17 @@ class PorchNativeTests(unittest.TestCase):
                     self.assertEqual(response.status,201)
                 sealed=story_answer["receipt"]
                 self.assertTrue(story_answer["state"]["storytable"]["sealed"])
+                derived=(project.tray/"crossed-bits"/"shot-asset-0001.png")
+                self.assertTrue(derived.is_file())
+                self.assertEqual(donors.sha_file(derived),
+                                 sealed["shotAssignments"][0]["crossedImageSha256"])
+                self.assertEqual(sealed["shotAssignments"][0]["borrowedSources"][0]
+                                 ["sourceSha256"],
+                                 prepared["stillSha256"][images[0]])
+                with self.assertRaises(HTTPError) as stale_cross:
+                    urlopen(origin+"/api/porch/contact/frame/"+
+                            source_preview["comparisonSha256"]+"/right/1")
+                self.assertEqual(stale_cross.exception.code,404)
                 # Sealing is a separate crossing; stale unsealed comparison
                 # images are invalidated, never adopted as the saved story.
                 with self.assertRaises(HTTPError) as stale_image:

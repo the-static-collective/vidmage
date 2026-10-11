@@ -30,6 +30,7 @@
     "band-iq:porch": "python3 -m bridge.band_iq_front_porch --help",
     "band-iq:storytable-proof": "python3 -m unittest -v tests.test_band_iq_storytable",
     "band-iq:filmstrip-proof": "python3 -m unittest -v tests.test_band_iq_living_filmstrip",
-    "band-iq:contact-proof": "python3 -m unittest -v tests.test_band_iq_contact_sheet"
+    "band-iq:contact-proof": "python3 -m unittest -v tests.test_band_iq_contact_sheet",
+    "band-iq:cross-proof": "python3 -m unittest -v tests.test_band_iq_cross_bits"
   }
 }

@@ -125,7 +125,7 @@ def build(story,plan,cards,observation,audio,asset_root,destination):
                 })
             authored=story["shotAssignments"][i]
             need(authored["shotId"]==native_shot["id"] and
-                 authored["sourceSha256"]==source["sha256"],
+                 authored.get("crossedImageSha256",authored["sourceSha256"])==source["sha256"],
                  "sampled timeline differs from human source choice")
             rows.append({
                 "shotIndex":i,

@@ -12,6 +12,7 @@ from pathlib import Path
 from . import band_iq as iq
 from . import band_iq_film_loop as loop
 from . import scene_card_film as film
+from . import band_iq_cross_bits as cross
 
 SCHEMA="vidmage/band-iq-010-human-storytable/v1"
 MAX_SHOTS=256
@@ -51,9 +52,10 @@ def author(form,paper_tray,plan,original_cards,asset_root):
     cards=[]
     history=[]
     for i,(timing,selection) in enumerate(zip(old_shots,choices)):
-        need(isinstance(selection,dict) and set(selection)=={
-            "shotId","sourceAssetId","focus","protectText"},
-            "each shot requires one exact owned source, framing and text protection")
+        need(isinstance(selection,dict) and
+             set(selection) in ({"shotId","sourceAssetId","focus","protectText"},
+                                {"shotId","sourceAssetId","focus","protectText","crosses"}),
+            "one exact owned image, framing and optional bounded borrowed pieces required")
         sid=timing["id"];aid=selection["sourceAssetId"];focus=selection["focus"]
         need(selection["shotId"]==sid and aid in source,
              "authored shot ID or owned image choice unknown")
@@ -65,22 +67,28 @@ def author(form,paper_tray,plan,original_cards,asset_root):
              "protected writing is an explicit per-shot boolean")
         focus=[round(float(x),3) for x in focus]
         key="shot-asset-%04d"%(i+1)
-        # Every shot occurrence receives its own asset alias so an identical
-        # photo can be cropped/protected differently in two distinct windows.
+        bits=cross.validate_bits(selection.get("crosses",[]),source)
+        crossing=(cross.verify_cross(aid,bits,source,asset_root,expected,i)
+                  if bits else None)
+        # One shot alias may refer to a non-destructive, independently sourced
+        # composite, with every borrowed crop traced to its original.
         assets[key]={
-            "path":source[aid]["path"],
+            "path":crossing["path"] if crossing else source[aid]["path"],
             "mode":"protect-text" if selection["protectText"] else "subject",
             "focus":focus,
         }
         cards.append({"shotId":sid,"assetId":key,"kineticSafe":False})
-        history.append({
-            "shotId":sid,
-            "sourceAssetId":aid,
+        record={
+            "shotId":sid,"sourceAssetId":aid,
             "sourceSha256":expected[aid],
             "start":timing["start"],"end":timing["end"],
-            "focus":focus,
-            "protectText":selection["protectText"],
-        })
+            "focus":focus,"protectText":selection["protectText"],
+        }
+        if bits:
+            record["crosses"]=bits
+            record["crossedImageSha256"]=crossing["sha256"]
+            record["borrowedSources"]=crossing["sourceEvidence"]
+        history.append(record)
     result_cards={"schema":"vidmage/editorial-scene-cards/v1",
                   "status":"proposal-only","assets":assets,"shots":cards}
     film.validate(plan,result_cards,
@@ -92,9 +100,10 @@ def author(form,paper_tray,plan,original_cards,asset_root):
                                                    "value":0}]}]}},
                   asset_root)
     actual=loop.exact_asset_bindings(result_cards,asset_root)
-    need(all(actual["shot-asset-%04d"%(i+1)]==r["sourceSha256"]
+    need(all(actual["shot-asset-%04d"%(i+1)]==
+             r.get("crossedImageSha256",r["sourceSha256"])
              for i,r in enumerate(history)),
-         "author-picked stills are not the same owned source bytes")
+         "authored shot does not reproduce source-pinned owned or crossed image bytes")
     body={
         "schema":SCHEMA,"status":"owner-authored-before-film",
         "sourcePaperTraySha256":paper_tray["paperTraySha256"],
@@ -123,6 +132,7 @@ def verified(receipt_path,cards_path,paper_tray,plan,original_cards,asset_root):
     selections=[{
         "shotId":x["shotId"],"sourceAssetId":x["sourceAssetId"],
         "focus":x["focus"],"protectText":x["protectText"],
+        **({"crosses":x["crosses"]} if "crosses" in x else {}),
     } for x in saved["shotAssignments"]]
     form={
         "paperTraySha256":paper_tray["paperTraySha256"],

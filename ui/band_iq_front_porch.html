@@ -141,6 +141,46 @@
               </div>
               <p id="contact-status" role="status" aria-live="polite" class="contact-status">Neither side has been selected or sealed.</p>
             </section>
+            <section id="candidate-tray" class="candidate-tray" aria-labelledby="tray-title">
+              <div class="receipt-strip">BAND-IQ 013 · THE CANDIDATE TRAY</div>
+              <h3 id="tray-title">Pocket several possible stories.</h3>
+              <p>Save up to four alternate arrangements in this page. Grab a rectangular bit from any owned picture, then cross it onto another shot. Nothing becomes the film until you deliberately put it into your draft and seal the Storytable.</p>
+              <div class="tray-actions">
+                <button id="tray-save" type="button" class="story-navigate">Keep this draft as a candidate</button>
+                <span id="tray-count" class="mono">0 / 4 temporary candidates</span>
+              </div>
+              <div id="tray-candidates" class="tray-collection" aria-live="polite"></div>
+              <div class="cross-editor">
+                <div class="cross-headline"><strong>GRAB / CROSS BITS</strong><span>Real source rectangles · not automatic object cutouts</span></div>
+                <label for="cross-source">Grab from an owned image</label>
+                <select id="cross-source"></select>
+                <div class="cross-sliders">
+                  <label>Grab left <input id="cross-gx" type="range" min="0" max="90" step="5" value="10"/></label>
+                  <label>Grab top <input id="cross-gy" type="range" min="0" max="90" step="5" value="10"/></label>
+                  <label>Grab width <input id="cross-gw" type="range" min="5" max="90" step="5" value="40"/></label>
+                  <label>Grab height <input id="cross-gh" type="range" min="5" max="90" step="5" value="40"/></label>
+                  <label>Place left <input id="cross-px" type="range" min="0" max="90" step="5" value="30"/></label>
+                  <label>Place top <input id="cross-py" type="range" min="0" max="90" step="5" value="30"/></label>
+                  <label>Place width <input id="cross-pw" type="range" min="5" max="90" step="5" value="40"/></label>
+                  <label>Place height <input id="cross-ph" type="range" min="5" max="90" step="5" value="40"/></label>
+                  <label>Opacity <input id="cross-opacity" type="range" min="10" max="100" step="5" value="100"/></label>
+                </div>
+                <p class="cross-note" id="cross-source-note">The crop and landing rectangles are limited to the bounds of the owned images. Up to three pieces per shot.</p>
+                <button id="cross-preview" type="button" class="secondary-comparison">Compare grabbed pixels ↔</button>
+              </div>
+              <div id="cross-result" hidden>
+                <div class="contact-pair">
+                  <div><div class="contact-side-heading">CURRENT DRAFT</div><div id="cross-left" class="contact-frame-row"></div></div>
+                  <div><div class="contact-side-heading">CROSSED POSSIBILITY</div><div id="cross-right" class="contact-frame-row"></div></div>
+                </div>
+                <p class="contact-disclaimer">Six real VidMage source frames at matching song times. Grabbed pixels are ordinary rectangular crops, not semantic object extraction.</p>
+                <div class="contact-choices">
+                  <button id="cross-apply" type="button" class="primary">Cross these bits into my draft ↗</button>
+                  <button id="cross-discard" type="button" class="story-navigate">Leave the source alone</button>
+                </div>
+              </div>
+              <p id="tray-status" role="status" aria-live="polite" class="contact-status">No candidates stored. The original media and paper plan are untouched.</p>
+            </section>
             <div id="story-sealing">
               <label for="story-author">Who arranged this story? <small>A new named creative signature</small></label>
               <input id="story-author" type="text" maxlength="256" autocomplete="off" placeholder="Your name or review ID"/>

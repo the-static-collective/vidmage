@@ -4,6 +4,8 @@
   let state=null,working=false;
   let storyDraft=null,activeShot=0;
   let contactShot=-1,contactDraft=null,contactEvidence=null;
+  const tray=[];
+  let crossEvidence=null;
   const lensNames={
     landscape:"Wide & wandering",
     architecture:"Rooms & corridors",
@@ -106,8 +108,9 @@
   }
   function syncContactForShot(){
     const table=state?.storytable;
-    $("contact-sheet").hidden=!table||table.sealed;
-    if(!table||table.sealed){
+    $("contact-sheet").hidden=!table||table.sealed||
+      !!storyDraft?.[activeShot]?.crosses?.length;
+    if(!table||table.sealed||storyDraft?.[activeShot]?.crosses?.length){
       contactEvidence=null;
       return;
     }
@@ -173,6 +176,136 @@
     });
   }
 
+  function snapshotDraft(){
+    return storyDraft.map(s=>({
+      ...s,focus:s.focus.slice(),crosses:structuredClone(s.crosses||[]),
+    }));
+  }
+  function crossChoice(shot){
+    return {
+      sourceAssetId:shot.sourceAssetId,
+      focus:shot.focus.slice(),
+      protectText:shot.protectText,
+      crosses:structuredClone(shot.crosses||[]),
+    };
+  }
+  function clearCross(reason){
+    crossEvidence=null;
+    $("cross-result").hidden=true;
+    if(reason)$("tray-status").textContent=reason;
+  }
+  function drawTray(){
+    const table=state?.storytable;
+    $("candidate-tray").hidden=!table||table.sealed;
+    if(!table||table.sealed){
+      crossEvidence=null;
+      return;
+    }
+    $("tray-count").textContent=tray.length+" / 4 temporary candidates";
+    $("tray-save").disabled=tray.length>=4;
+    $("tray-candidates").replaceChildren();
+    tray.forEach((candidate,i)=>{
+      const box=document.createElement("article");
+      box.className="tray-candidate";
+      const summary=document.createElement("div");
+      summary.className="tray-summary";
+      const crossings=candidate.shots.reduce((n,s)=>n+(s.crosses?.length||0),0);
+      const diffs=candidate.shots.filter((s,j)=>
+        JSON.stringify(crossChoice(s))!==
+        JSON.stringify(crossChoice(storyDraft[j]))).length;
+      summary.textContent=candidate.name+" · "+crossings+
+        " borrowed bits · "+diffs+" currently differing shots";
+      const controls=document.createElement("div");
+      controls.className="tray-buttons";
+      const compare=document.createElement("button");
+      compare.type="button";compare.textContent="Compare this shot";
+      compare.addEventListener("click",()=>compareCross(
+        crossChoice(storyDraft[activeShot]),crossChoice(candidate.shots[activeShot]),
+        "candidate-shot"));
+      const apply=document.createElement("button");
+      apply.type="button";apply.textContent="Put whole candidate in draft";
+      apply.addEventListener("click",()=>{
+        if(!window.confirm("Replace the entire UNSEALED on-screen draft with "+
+          candidate.name+"? The previous draft can be saved separately. "+
+          "Original media and sealed story evidence remain unchanged."))return;
+        storyDraft=candidate.shots.map(s=>({
+          ...s,focus:s.focus.slice(),crosses:structuredClone(s.crosses||[]),
+        }));
+        clearCross("Whole candidate copied into your unsealed draft. Nothing sealed or rendered.");
+        drawStorytable();
+      });
+      const discard=document.createElement("button");
+      discard.type="button";discard.textContent="Discard candidate";
+      discard.addEventListener("click",()=>{
+        tray.splice(i,1);drawTray();
+      });
+      controls.append(compare,apply,discard);
+      box.append(summary,controls);
+      $("tray-candidates").append(box);
+    });
+    const selected=$("cross-source").value;
+    $("cross-source").replaceChildren();
+    table.images.forEach((source,i)=>{
+      const option=document.createElement("option");
+      option.value=source.assetId;
+      option.textContent="Owned picture "+String(i+1).padStart(2,"0");
+      $("cross-source").append(option);
+    });
+    if(table.images.some(x=>x.assetId===selected)){
+      $("cross-source").value=selected;
+    }
+    if(!selected&&table.images.length>1){
+      $("cross-source").value=table.images[1].assetId;
+    }
+  }
+  function oneGrab(){
+    const read=id=>Number($(id).value)/100;
+    const box=(x,y,w,h)=>{
+      const xx=read(x),yy=read(y);
+      return [xx,yy,Math.max(.05,Math.min(read(w),1-xx)),
+              Math.max(.05,Math.min(read(h),1-yy))].map(n=>Math.round(n*10000)/10000);
+    };
+    return {
+      sourceAssetId:$("cross-source").value,
+      grab:box("cross-gx","cross-gy","cross-gw","cross-gh"),
+      place:box("cross-px","cross-py","cross-pw","cross-ph"),
+      opacity:read("cross-opacity"),
+    };
+  }
+  async function compareCross(left,right,kind){
+    if(working||!storyDraft||state?.storytable?.sealed)return;
+    const sid=storyDraft[activeShot].shotId;
+    if(right.crosses?.length>3||left.crosses?.length>3){
+      clearCross("Up to three grab/cross pieces per shot.");
+      return;
+    }
+    const payload={
+      paperTraySha256:state.paper.paperTraySha256,
+      shotId:sid,left,right,
+      compareOnly:true,allowStorySeal:false,allowMovieRender:false,
+      allowNetworkUpload:false,allowPaidProviders:false,allowPublication:false,
+    };
+    clearCross("Sampling the current shot and borrowed bits using the actual local renderer…");
+    setBusy(true);
+    try{
+      const r=await request("/api/porch/cross/compare",payload);
+      const data=r.receipt;
+      if(data.schema!=="vidmage/band-iq-013-crossed-bits-contact/v1"||
+         data.shotId!==sid||JSON.stringify(crossChoice(storyDraft[activeShot]))!==JSON.stringify(left)){
+        throw Error("The comparison no longer matches this unsealed shot.");
+      }
+      crossEvidence={receipt:data,left,right,shotId:sid,kind};
+      drawContactFrames(data,"left","cross-left");
+      drawContactFrames(data,"right","cross-right");
+      $("cross-result").hidden=false;
+      $("cross-apply").textContent=kind==="candidate-shot"?
+        "Apply this candidate shot to my draft ↗":
+        "Cross these bits into my draft ↗";
+      $("tray-status").textContent=
+        "Six real local frames. Neither choice is saved; apply one deliberately.";
+    }catch(e){clearCross(e.message||"Local source could not be compared.");}
+    finally{setBusy(false);}
+  }
   function selectShot(index){
     const shots=storyShots(),table=state?.storytable;
     if(!table||!shots.length)return;
@@ -213,6 +346,7 @@
     $("story-previous").disabled=activeShot===0;
     $("story-next").disabled=activeShot===shots.length-1;
     syncContactForShot();
+    drawTray();
   }
   function drawStorytable(){
     const table=state?.storytable;
@@ -222,6 +356,7 @@
         shotId:x.shotId,start:x.start,end:x.end,
         sourceAssetId:x.sourceAssetId,
         focus:x.focus.slice(),protectText:x.protectText,
+        crosses:(x.crosses||[]).map(y=>structuredClone(y)),
       }));
     }
     $("story-audio").src="/api/porch/story/audio";
@@ -542,6 +677,7 @@
       shots:storyDraft.map(x=>({
         shotId:x.shotId,sourceAssetId:x.sourceAssetId,
         focus:x.focus.slice(),protectText:x.protectText,
+        ...(x.crosses?.length?{crosses:structuredClone(x.crosses)}:{}),
       })),
       preserveOriginals:true,publish:false,
       allowPaidProviders:false,allowNetworkUpload:false,
@@ -582,6 +718,51 @@
     }catch(error){message(error.message||"The local sketch could not be verified.");}
     finally{setBusy(false);}
   });
+
+  $("tray-save").addEventListener("click",()=>{
+    if(!storyDraft||state.storytable?.sealed||tray.length>=4)return;
+    tray.push({name:"Candidate "+String(tray.length+1).padStart(2,"0"),
+               shots:snapshotDraft()});
+    drawTray();
+    $("tray-status").textContent="A complete shot arrangement is held temporarily in this page.";
+  });
+  $("cross-preview").addEventListener("click",()=>{
+    if(!storyDraft||state.storytable?.sealed)return;
+    const shot=storyDraft[activeShot];
+    const left=crossChoice(shot);
+    const right=crossChoice(shot);
+    right.crosses.push(oneGrab());
+    compareCross(left,right,"cross");
+  });
+  $("cross-apply").addEventListener("click",()=>{
+    const hit=crossEvidence;
+    if(!hit||!storyDraft||state.storytable?.sealed||
+       storyDraft[activeShot].shotId!==hit.shotId||
+       JSON.stringify(crossChoice(storyDraft[activeShot]))!==JSON.stringify(hit.left)){
+      clearCross("This candidate is stale. Compare it again before applying.");
+      return;
+    }
+    if(!window.confirm("Apply this exact borrowed-pixel candidate to the UNSEALED draft only? "+
+       "Nothing is saved as a film or final story by this action."))return;
+    Object.assign(storyDraft[activeShot],{
+      sourceAssetId:hit.right.sourceAssetId,
+      focus:hit.right.focus.slice(),
+      protectText:hit.right.protectText,
+      crosses:structuredClone(hit.right.crosses||[]),
+    });
+    clearCross("Grabbed pixels applied to the unsaved draft. Seal separately when ready.");
+    selectShot(activeShot);
+  });
+  $("cross-discard").addEventListener("click",()=>{
+    clearCross("Candidate dismissed; the draft and original media were not altered.");
+  });
+  for(const id of ["cross-source","cross-gx","cross-gy","cross-gw",
+                   "cross-gh","cross-px","cross-py","cross-pw","cross-ph",
+                   "cross-opacity"]){
+    $(id).addEventListener("input",()=>{
+      clearCross("Borrowed bit changed. Compare again to inspect actual pixels.");
+    });
+  }
 
   $("make").addEventListener("click",async()=>{
     if(working||!state?.paper)return;

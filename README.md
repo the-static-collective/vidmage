@@ -50,6 +50,7 @@ Read the proposed implementation packet:
 - [BAND-IQ 010](docs/BAND_IQ_010.md) — the human Storytable: hear the actual song, assign owned photos to each native shot, choose per-occurrence framing/text protection, then seal the exact source before the first A/B films
 - [BAND-IQ 011](docs/BAND_IQ_011.md) — the Living Filmstrip: source-real, song-timed pre-film raster samples from sealed authored cards, without generating a movie or making a creative selection
 - [BAND-IQ 012](docs/BAND_IQ_012.md) — the Contact Sheet: before sealing the Storytable, compare real current-versus-candidate local raster frames for one song window and explicitly apply the alternate only to the unsealed draft
+- [BAND-IQ 013](docs/BAND_IQ_013.md) — Candidate Tray × Grab/Cross Bits: hold four reversible multi-shot story possibilities, borrow traceable owned-image rectangles into shots, and make real VidMage/Playdeck films from a separately sealed composition
 
 The pinned upstream SHA list lives in [donors.lock.json](donors.lock.json). Run `npm test` and `npm run verify:donors` (Node 22+) to validate its structure offline. These tests validate metadata shape, **not** upstream feature behavior or user-level filmmaking.
 
