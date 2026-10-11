@@ -297,10 +297,13 @@ class Handler(BaseHTTPRequestHandler):
                         break
                     self.wfile.write(chunk)
                     remaining-=len(chunk)
-        except (OSError,ValueError) as exc:
-            self._error(409,"media changed or unavailable")
         except (BrokenPipeError,ConnectionResetError):
             pass
+        except (OSError,ValueError):
+            # Avoid attempting a second HTTP response after a partially sent body.
+            if not self.wfile.closed:
+                try: self.connection.close()
+                except OSError: pass
 
     def do_HEAD(self):
         self.do_GET()
@@ -322,8 +325,8 @@ class Handler(BaseHTTPRequestHandler):
         host=self.headers.get("Host","")
         origin=self.headers.get("Origin","")
         expected=f"http://127.0.0.1:{self.server.server_port}"
-        if self.headers.get("X-Review-Token")!=self.bench.token or
-           origin!=expected or host!=expected.removeprefix("http://"):
+        if (self.headers.get("X-Review-Token")!=self.bench.token or
+            origin!=expected or host!=expected.removeprefix("http://")):
             self._error(403,"review capability or same-origin boundary missing")
             return
         if self.headers.get("Content-Type","").split(";")[0].lower()!="application/json":
