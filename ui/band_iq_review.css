@@ -78,6 +78,8 @@ footer{margin:30px 0;text-align:center;color:#97a69a;font-size:.76rem}
 .lab-window{display:grid;gap:5px;border-bottom:1px solid #56665c;padding:8px 0}
 .lab-window>div:first-child{color:#d5e6cf;font-size:.87rem}
 .lab-window small{color:#aabaaa;font: .73rem ui-monospace,monospace}
-.lab-rail{width:100%;height:8px;max-width:700px;background:#354c3a;border-radius:4px;overflow:hidden}
-.lab-difference{height:100%;background:#b9c39b}
+.lab-rail{width:100%;height:8px;max-width:700px;background:#354c3a;border:0;border-radius:4px;overflow:hidden;accent-color:#b9c39b;appearance:none}
+.lab-rail::-webkit-progress-bar{background:#354c3a}
+.lab-rail::-webkit-progress-value{background:#b9c39b}
+.lab-rail::-moz-progress-bar{background:#b9c39b}
 #lab-questions{display:grid;gap:8px;color:#d5dcd0;line-height:1.5;padding-left:24px}
