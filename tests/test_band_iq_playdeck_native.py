@@ -317,6 +317,8 @@ class NativePlaydeckTest(unittest.TestCase):
             next_bench.enable_next_sources(plan=plan_file,cards=cards_file,
                 observation=observation,audio=audio,asset_root=root)
             self.assertTrue(next_bench.state()["constraints"]["nextQuestionToolsConfigured"])
+            next_bench.next_blender_root=os.environ["VIDMAGE_BLENDER_ROOT"]
+            self.assertTrue(next_bench.state()["constraints"]["nativeQuestionDoctorConfigured"])
             with contextlib.redirect_stdout(io.StringIO()):
                 server=review.serve(next_bench,port=0)
             runner=threading.Thread(target=server.serve_forever,daemon=True)
@@ -375,6 +377,34 @@ class NativePlaydeckTest(unittest.TestCase):
                 self.assertEqual(repeated.exception.code,409)
                 self.assertEqual(next_bench.get_decision(),another)
                 self.assertEqual(donors.sha_file(vidmage_movie),sourceA)
+                self.assertEqual(donors.sha_file(remotion_movie),sourceB)
+                # 006 in-room actual measurement is a SECOND explicit POST,
+                # not silently triggered by the render or the question.
+                self.assertIsNone(next_bench.last_observation)
+                analysis=json.dumps({"inspectActualFilms":True}).encode("utf8")
+                unauthorized=Request(baseurl+"/api/next/observe",
+                                     data=analysis,headers={
+                       "Content-Type":"application/json",
+                       "Origin":"https://outside.example",
+                       "X-Review-Token":next_bench.token})
+                with self.assertRaises(HTTPError) as refused:
+                    urlopen(unauthorized)
+                self.assertEqual(refused.exception.code,403)
+                self.assertIsNone(next_bench.last_observation)
+                authorized=Request(baseurl+"/api/next/observe",
+                                   data=analysis,headers={
+                       "Content-Type":"application/json","Origin":baseurl,
+                       "X-Review-Token":next_bench.token})
+                with urlopen(authorized) as response:
+                    self.assertEqual(response.status,200)
+                    observed=json.load(response)["observation"]
+                self.assertEqual(observed["humanChosenOperation"],"CHANGE_LENS")
+                self.assertEqual(observed["sourceReviewSha256"],another["reviewSha256"])
+                self.assertEqual(observed["actualOldFilmSha256"],sourceA)
+                self.assertTrue(observed["realNativeDoctor"])
+                self.assertFalse(observed["automaticKeep"])
+                self.assertIsNone(observed["artisticJudgment"])
+                self.assertEqual(len(observed["possibleNextQuestions"]),3)
                 self.assertEqual(donors.sha_file(remotion_movie),sourceB)
             finally:
                 server.shutdown()
