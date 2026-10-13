@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Paula Vidmage: one private EC2 render node (NO inbound ports); manual Cloudflare Tunnel + Access required.'
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Existing VPC with a public subnet and an internet-gateway route for outbound access.
+  PublicSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet in the selected VPC with route to an Internet Gateway. No app ports opened.
+  UbuntuAmi:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id
+  MachineSize:
+    Type: String
+    Default: t3.medium
+    AllowedValues: [t3.small, t3.medium, t3.large]
+  DiskGiB:
+    Type: Number
+    Default: 40
+    MinValue: 30
+    MaxValue: 250
+Resources:
+  PaulaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Paula Studio outbound only. No ingress rules (not even SSH).
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS outbound for updates, Systems Manager, and Cloudflare Tunnel
+      Tags:
+        - Key: Name
+          Value: paula-studio-no-ingress
+  PaulaSSMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ec2.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+  PaulaSSMInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref PaulaSSMRole]
+  PaulaEC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref UbuntuAmi
+      InstanceType: !Ref MachineSize
+      IamInstanceProfile: !Ref PaulaSSMInstanceProfile
+      MetadataOptions:
+        HttpTokens: required
+        HttpEndpoint: enabled
+      NetworkInterfaces:
+        - DeviceIndex: '0'
+          AssociatePublicIpAddress: true
+          DeleteOnTermination: true
+          SubnetId: !Ref PublicSubnetId
+          GroupSet: [!Ref PaulaSecurityGroup]
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: !Ref DiskGiB
+            VolumeType: gp3
+            Encrypted: true
+            DeleteOnTermination: false
+      Tags:
+        - Key: Name
+          Value: paula-vidmage-aws
+        - Key: App
+          Value: Paula-Vidmage
+      UserData:
+        Fn::Base64: !Sub |
+          #cloud-config
+          package_update: true
+          packages:
+            - git
+            - curl
+            - python3
+          runcmd:
+            - mkdir -p /opt/paula-vidmage
+            - chown -R ubuntu:ubuntu /opt/paula-vidmage
+            - [ bash, -lc, 'sudo -u ubuntu git clone --depth 1 --branch feature/paula-dual-host-016 https://github.com/the-static-collective/vidmage.git /opt/paula-vidmage || echo "Repo not cloned yet. Clone manually after branch is available."' ]
+            - [ bash, -lc, 'if [ -f /opt/paula-vidmage/deploy/install_docker_ubuntu.sh ]; then bash /opt/paula-vidmage/deploy/install_docker_ubuntu.sh; fi' ]
+Outputs:
+  EC2InstanceId:
+    Description: Use AWS Systems Manager Session Manager to open a shell. No inbound SSH required.
+    Value: !Ref PaulaEC2
+  SecurityGroupId:
+    Value: !Ref PaulaSecurityGroup
+  Reminder:
+    Description: "Finish deployment by filling the private env, starting the node, and configuring Cloudflare Tunnel plus Access."
+    Value: No tunnel or app is exposed by this stack. AWS billing starts when resources are created.

@@ -1,0 +1,19 @@
+services:
+  paula:
+    build:
+      context: .
+      dockerfile: Dockerfile.paula
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8768:8768"
+    env_file:
+      - path: .env.paula
+        required: true
+    volumes:
+      - ./paula-private-data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 160
+    mem_limit: 3g

@@ -57,3 +57,13 @@ The pinned upstream SHA list lives in [donors.lock.json](donors.lock.json). Run 
 Proposed work proceeds on a reviewable branch; no merge or deployment is implied by a passing test or a draft pull request.
 
 This repo is the **approved public home**: `the-static-collective/vidmage`.
+
+## Paula Pocket 016 — two private nodes (experimental)
+
+A mobile-first story editor, private FFmpeg MP4 renderer, explicit portable receipts, and a two-studio picker. Deployable on a home Linux PC and a separate AWS EC2 node, each with its own Cloudflare Tunnel and Access app. The code is not deployed or proven on iPhone Safari; cloud setup requires the owner's credentials and confirmation.
+
+- [Home + AWS installation and security boundary](deploy/DUAL_HOST_SETUP.md)
+- [Paula Pocket and cloud architecture](paula_cloud/README.md)
+- [AWS CloudFormation template](deploy/aws/paula-ec2.yaml)
+
+Do not point one shared tunnel or load balancer at both machines: separate SQLite state and receipt keys are intentionally not synchronized.
