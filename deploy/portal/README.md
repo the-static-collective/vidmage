@@ -23,7 +23,7 @@ The user completed interactive authorization. Read-only verification now shows *
 - Migration preview: **6 records copied, 0 skipped**. These would be DNS-only at first. Any future Cloudflare proxy/Access decisions must be independent.
 - Porkbun eligibility: **WARN** because wildcard Porkbun parking is in use. Porkbun-issued free SSL may **stop renewing** after moving the domain. Verify any existing origin/certificate dependencies before a cutover.
 - No active Porkbun static hosting, URL forwarding, or email forwarding was returned by read-only checks. DNSSEC DS read returned null.
-- No live domain migration, DNS update, Cloudflare Pages project, or EC2 resource has been created.
+- **Migration authorized and queued 2026-10-13.** Porkbun changed registrar nameservers to `damien.ns.cloudflare.com` and `lilith.ns.cloudflare.com`; Cloudflare zone `e30c00c477785e33d5e9db102fe695a4` has all six original DNS records (DNS-only). Cloudflare activation remained `pending` at last verification; its public delegation read may lag registry state. No Pages, Access, tunnels or EC2 created, and the website HTTPS has not yet been independently checked. Confirm zone `active` before provisioning hostnames.
 - **Human approval gate:** explicitly confirm whole-domain authoritative DNS migration *after* reviewing expected website and certificate impact. Cloudflare connection is insufficient consent. Preserve the existing records.
 
 ## Step 1: human connects Cloudflare to Porkbun
