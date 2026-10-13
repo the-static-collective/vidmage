@@ -33,3 +33,7 @@ tmp/
 
 # Synthetic tiny fixtures (when explicitly reviewed) should use a manifest
 # and force-add by exception rather than widening this default.
+
+# Paula's private two-node studio runtime
+paula-private-data/
+*.audio
