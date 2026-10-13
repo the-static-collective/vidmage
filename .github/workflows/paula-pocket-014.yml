@@ -1,0 +1,33 @@
+name: Paula Pocket 014
+on:
+  push:
+    branches:
+      - feature/paula-pocket-014-mobile-receipts
+  pull_request:
+    paths:
+      - 'paula/**'
+      - 'tests/test_paula_receipt.py'
+      - '.github/workflows/paula-pocket-014.yml'
+permissions:
+  contents: read
+jobs:
+  mobile-receipt-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Python source receipt and refusal tests
+        run: python -m unittest discover -s tests -p 'test_paula_receipt.py' -v
+      - name: Check embedded browser JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          content = Path("paula/index.html").read_text(encoding="utf-8")
+          scripts = re.findall(r"<script>(.*?)</script>", content, re.S)
+          assert len(scripts) == 1
+          Path("/tmp/paula-pocket-app.js").write_text(scripts[0], encoding="utf-8")
+          PY
+          node --check /tmp/paula-pocket-app.js
