@@ -13,5 +13,5 @@ jobs:
         with: {python-version: '3.12'}
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
       - run: python -m pip install -r paula_cloud/requirements.txt pytest httpx
-      - run: python -m pytest -q tests/test_paula_cloud.py tests/test_paula_receipt.py tests/test_paula_dual.py tests/test_paula_domain.py tests/test_paula_dual.py
+      - run: python -m pytest -q tests/test_paula_cloud.py tests/test_paula_receipt.py tests/test_paula_dual.py tests/test_paula_domain.py
       - run: bash -n deploy/*.sh
