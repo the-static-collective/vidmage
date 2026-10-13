@@ -1,0 +1,14 @@
+FROM python:3.12-slim-bookworm
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY paula_cloud/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+COPY paula/ /app/paula/
+COPY paula_cloud/ /app/paula_cloud/
+RUN useradd -r -u 10001 -m studio && mkdir -p /data && chown studio:studio /data
+USER studio
+VOLUME /data
+ENV PAULA_HOST=0.0.0.0 PAULA_PORT=8768 PAULA_DATA_DIR=/data PAULA_AUTH_MODE=cloudflare
+EXPOSE 8768
+CMD ["python","-m","paula_cloud.server"]
