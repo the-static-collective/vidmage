@@ -14,9 +14,21 @@ The home and AWS sites retain separate private SQLite databases, uploaded media,
 
 Read-only Porkbun audit on 2026-10-13 established that **abundent.org** is an active Porkbun domain with Porkbun nameservers. Its Cloudflare integration was **not connected**. The dry-run migration preview reported **six ordinary records copied and zero skipped**: two apex A records, a wildcard CNAME (Porkbun), the existing www/Vercel CNAME, and two ACME challenge TXT records. The registrar's four NS records are not copied as ordinary zone content. These are live website records — preserve them! Check the current preview again immediately before migration, in case the zone changed. Do not delete or overwrite the existing www and apex records, wildcard, or certificate TXT records. No migration has been requested by this code.
 
+## Connection and domain audit — 2026-10-13
+
+The user completed interactive authorization. Read-only verification now shows **Porkbun ↔ Cloudflare connected**. This authorizes API access, **not** a move of nameservers.
+
+- Domain migration queue: **NOT_QUEUED**. DNS nameservers still Porkbun.
+- Live Porkbun DNS inventory: two A records on apex, a wildcard CNAME to Porkbun parking, a www CNAME pointing to Vercel, and two `_acme-challenge` TXT tokens, plus registrar NS records.
+- Migration preview: **6 records copied, 0 skipped**. These would be DNS-only at first. Any future Cloudflare proxy/Access decisions must be independent.
+- Porkbun eligibility: **WARN** because wildcard Porkbun parking is in use. Porkbun-issued free SSL may **stop renewing** after moving the domain. Verify any existing origin/certificate dependencies before a cutover.
+- No active Porkbun static hosting, URL forwarding, or email forwarding was returned by read-only checks. DNSSEC DS read returned null.
+- No live domain migration, DNS update, Cloudflare Pages project, or EC2 resource has been created.
+- **Human approval gate:** explicitly confirm whole-domain authoritative DNS migration *after* reviewing expected website and certificate impact. Cloudflare connection is insufficient consent. Preserve the existing records.
+
 ## Step 1: human connects Cloudflare to Porkbun
 
-Use **https://porkbun.com/account/connectCloudflare** from the owning Porkbun browser session. Authorize the intended Cloudflare account. No Cloudflare API token goes in this repository or in chat. This is an interactive human step; automatic authorization is not possible here.
+**Completed 2026-10-13:** owner authorized Cloudflare from Porkbun's browser session. Read-only connection check returned active. Do not repeat unless disconnected; proceed only after the separate nameserver migration authorization. Never store Cloudflare credentials here or in chat.
 
 Once connected: obtain a fresh Cloudflare migration preview; review DNS preservation, CAA/DNSSEC, mail records, website routes, and hostname conflicts; only then approve domain migration and nameserver change. Migration will affect the **entire abundent.org zone**, not just Paula's subdomain. Do NOT migrate automatically merely because authorization is complete.
 
