@@ -13,7 +13,8 @@ class Links(HTMLParser):
 def test_portal_only_links_our_two_nodes_and_direct_flow():
     html=(ROOT/'deploy/portal/index.html').read_text(encoding='utf8')
     p=Links();p.feed(html)
-    assert p.targets==['https://ph-home.abundent.org/',
+    assert p.targets==['/make/',
+                      'https://ph-home.abundent.org/',
                       'https://ph-aws.abundent.org/',
                       'https://kling.ai/',
                       'https://www.flowmusic.app/']
