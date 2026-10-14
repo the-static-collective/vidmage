@@ -13,8 +13,8 @@ class Links(HTMLParser):
 def test_portal_only_links_our_two_nodes_and_direct_flow():
     html=(ROOT/'deploy/portal/index.html').read_text(encoding='utf8')
     p=Links();p.feed(html)
-    assert p.targets==['https://home.ph.abundent.org/',
-                      'https://aws.ph.abundent.org/',
+    assert p.targets==['https://ph-home.abundent.org/',
+                      'https://ph-aws.abundent.org/',
                       'https://www.flowmusic.app/']
     assert '<form' not in html.lower()
     assert '<script' not in html.lower()
@@ -23,8 +23,8 @@ def test_portal_only_links_our_two_nodes_and_direct_flow():
 
 def test_node_configuration_never_reuses_one_public_hostname():
     conf=(ROOT/'.env.paula.example').read_text()
-    assert 'PAULA_HOME_URL=https://home.ph.abundent.org' in conf
-    assert 'PAULA_AWS_URL=https://aws.ph.abundent.org' in conf
+    assert 'PAULA_HOME_URL=https://ph-home.abundent.org' in conf
+    assert 'PAULA_AWS_URL=https://ph-aws.abundent.org' in conf
     assert 'PAULA_CF_AUD=PASTE_APPLICATION_AUDIENCE_TAG' in conf
     assert 'PAULA_ALLOWED_EMAILS=paula@example.com' in conf
     assert 'PAULA_AUTH_MODE=cloudflare' in conf
