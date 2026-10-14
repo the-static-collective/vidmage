@@ -1,12 +1,14 @@
 # Paula's movie front door · ph.abundent.org
 
+**SSL note:** the first-level domains `ph-home.abundent.org` and `ph-aws.abundent.org` replace the earlier two-level `home.ph.abundent.org` and `aws.ph.abundent.org`. Cloudflare Universal SSL covers first-level names without requiring paid Advanced Certificate Manager. Do not set up the old names.
+
 Status: source prepared, **NOT LIVE** until Cloudflare, DNS, and at least one node are configured. No account tokens or Paula's media belong in GitHub.
 
 ## The fixed addresses
 
 - `https://ph.abundent.org` — a **static**, mobile-first Cloudflare Pages front door. Nothing private is stored or submitted here. Enable Cloudflare Access for this host.
-- `https://home.ph.abundent.org` — tunnel `paula-home` to **Home Linux** `http://127.0.0.1:8768`.
-- `https://aws.ph.abundent.org` — separate tunnel `paula-aws` to **AWS EC2** `http://127.0.0.1:8768`.
+- `https://ph-home.abundent.org` — tunnel `paula-home` to **Home Linux** `http://127.0.0.1:8768`.
+- `https://ph-aws.abundent.org` — separate tunnel `paula-aws` to **AWS EC2** `http://127.0.0.1:8768`.
 
 The home and AWS sites retain separate private SQLite databases, uploaded media, and HMAC receipt keys. No invisible DNS failover or replica tunnel. The portal is just an accessible link selector, not a state router or reverse proxy. The Flow link opens Flow Music in its own domain; it does not hijack login or programmatically operate Flow.
 
@@ -36,7 +38,7 @@ Once connected: obtain a fresh Cloudflare migration preview; review DNS preserva
 
 1. Cloudflare Pages: new project from GitHub `the-static-collective/vidmage`, set branch `feature/paula-domain-017-ph-abundent`, no build command, build output directory `deploy/portal`. Configure custom domain **ph.abundent.org** using Cloudflare Pages. If using CLI instead, with your own authenticated Cloudflare login: `npx wrangler pages deploy deploy/portal --project-name paula-movie-portal`. The named Pages project must first exist; choose a different name if already taken.
 2. In Cloudflare Zero Trust → Access → Applications, protect **ph.abundent.org** with an Allow policy for only Paula and designated helpers; use email OTP or an identity provider that works on her iPhone. Keep the exact identities in Cloudflare, not GitHub.
-3. Create **separate** private Access web applications for `home.ph.abundent.org` and `aws.ph.abundent.org`, with the same deliberate allowlist. Copy each application's **own** Application Audience (AUD) into that node's private `.env.paula`. Record the shared team domain as `https://YOURTEAM.cloudflareaccess.com`; never paste secrets into a chat.
+3. Create **separate** private Access web applications for `ph-home.abundent.org` and `ph-aws.abundent.org`, with the same deliberate allowlist. Copy each application's **own** Application Audience (AUD) into that node's private `.env.paula`. Record the shared team domain as `https://YOURTEAM.cloudflareaccess.com`; never paste secrets into a chat.
 4. Create two *different* remotely managed Cloudflare Tunnels with corresponding public hostnames and route each to **127.0.0.1:8768** on its own machine. Install `cloudflared` using the dashboard-provided shell command on each origin; protect with Access and require signed JWT at origin.
 5. Review records created for these exact hostnames. The pre-existing wildcard DNS record must not steal the three exact hosts; specific entries should override the wildcard. Do not copy tunnel credentials from one machine to another.
 
@@ -54,7 +56,7 @@ bash deploy/start_node.sh
 bash deploy/node_preflight.sh
 ```
 
-The example already pins `PAULA_HOME_URL=https://home.ph.abundent.org` and `PAULA_AWS_URL=https://aws.ph.abundent.org`. Set different `PAULA_NODE_LABEL` and different Access `PAULA_CF_AUD` on Home versus AWS. Original photos, generated films, receipt keys, and private `.env.paula` must never be committed.
+The example already pins `PAULA_HOME_URL=https://ph-home.abundent.org` and `PAULA_AWS_URL=https://ph-aws.abundent.org`. Set different `PAULA_NODE_LABEL` and different Access `PAULA_CF_AUD` on Home versus AWS. Original photos, generated films, receipt keys, and private `.env.paula` must never be committed.
 
 ## Step 4: no-guesswork acceptance test
 
