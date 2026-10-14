@@ -21,6 +21,25 @@
 
 **AWS remains a separate purchase gate:** Budget alert and explicit monthly spend choice required before launching EC2, EBS, public IPv4, Cloudflare browser sessions or other billable resources. Budget alerts are NOT hard spend caps.
 
+## Free, usable Kling planner — 020
+
+**Deployed and independently retrieved from public Pages (no new service bill):**
+
+- Public static preview `https://paula-movie-portal.pages.dev/make/` resolves and renders the `Paula's Shot Notebook` page.
+- Protected front door `https://ph.abundent.org/make/` remains behind Cloudflare Access; an unauthenticated external fetch returns `login_required`.
+- The portal links to `/make/` as its **first working action**. Home and AWS buttons explicitly identify unavailable render nodes.
+- `deploy/portal/make/index.html` and `app.js` implement a **browser-local** editor: title, story, character continuity, tone, video aspect ratio, up to 12 shots, camera direction and estimated seconds; one-copy-per-shot Kling prompts and a clip-downloaded checklist.
+- Notebook automatically saves into browser localStorage and can export or restore a bounded JSON backup. The **Export for Vidmage story editor** action generates `vidmage/paula-pocket-project/v1` with NO fabricated approval receipts; the private editor will require explicit scene approval once deployed.
+- Network boundaries: no `fetch`, XMLHttpRequest, WebSocket, analytics or provider API; site CSP allows **same-origin scripts** while retaining `connect-src 'none'`, `default-src 'none'`, `frame-ancestors 'none'`, and no forms. Private entries remain confined to the current browser origin, not cross-device synced. The `pages.dev` alias is public but stores no server-side story content.
+- `tests/test_paula_shotkit.py` runs Node VM compilation/pure-core tests, XSS text escaping, backup import bounds, portable export shape, plus static site structure/CSP checks. GitHub workflow runs it on changes. Live iPhone interaction has NOT been browser-tested, so do not describe it as iOS E2E verified.
+- Important: the two future render nodes still require an actual computer, secure Cloudflare Tunnel JWT environment, and for AWS spending approval.
+
+**Home launch hardening:**
+
+- `deploy/start_node.sh` now rejects empty Access config values and refuses `PAULA_AUTH_MODE=local` before starting a hosted node.
+- `deploy/node_preflight.sh` checks the actual HTTP status from `127.0.0.1:8768/api/health`. A missing server is informational; 401/503 is expected fail-closed; **anonymous HTTP 200 or other unexpected responses abort preflight** before connecting a tunnel.
+- No live origin was started and no tunnel/DNS routing changed in this patch.
+
 ## Next actions when operator is ready
 
 1. Confirm whether the home machine is Ubuntu/Debian, Windows+WSL2 or macOS, always-on disk/internet situation, and whether an AWS account is configured; use `deploy/DUAL_HOST_SETUP.md` for Ubuntu instructions and `deploy/aws/paula-ec2.yaml` for infrastructure.
