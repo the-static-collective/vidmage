@@ -85,7 +85,7 @@ Resources:
           runcmd:
             - mkdir -p /opt/paula-vidmage
             - chown -R ubuntu:ubuntu /opt/paula-vidmage
-            - [ bash, -lc, 'sudo -u ubuntu git clone --depth 1 --branch feature/paula-dual-host-016 https://github.com/the-static-collective/vidmage.git /opt/paula-vidmage || echo "Repo not cloned yet. Clone manually after branch is available."' ]
+            - [ bash, -lc, 'sudo -u ubuntu git clone --depth 1 --branch feature/paula-domain-017-ph-abundent https://github.com/the-static-collective/vidmage.git /opt/paula-vidmage || echo "Repo not cloned yet. Clone manually after branch is available."' ]
             - [ bash, -lc, 'if [ -f /opt/paula-vidmage/deploy/install_docker_ubuntu.sh ]; then bash /opt/paula-vidmage/deploy/install_docker_ubuntu.sh; fi' ]
 Outputs:
   EC2InstanceId:

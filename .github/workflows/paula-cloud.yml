@@ -1,9 +1,9 @@
 name: Paula Pocket Cloud Tests
 on:
   push:
-    paths: ['paula/**', 'paula_cloud/**', 'tests/test_paula_cloud.py', 'tests/test_paula_receipt.py', 'tests/test_paula_dual.py', 'deploy/**', '.github/workflows/paula-cloud.yml']
+    paths: ['paula/**', 'paula_cloud/**', 'tests/test_paula_cloud.py', 'tests/test_paula_receipt.py', 'tests/test_paula_domain.py', 'tests/test_paula_kling.py', 'tests/test_paula_shotkit.py', 'deploy/portal/**', 'deploy/aws/**', '.env.paula.example', 'tests/test_paula_dual.py', 'deploy/**', '.github/workflows/paula-cloud.yml']
   pull_request:
-    paths: ['paula/**', 'paula_cloud/**', 'tests/test_paula_cloud.py', 'tests/test_paula_receipt.py', 'tests/test_paula_dual.py', 'deploy/**', '.github/workflows/paula-cloud.yml']
+    paths: ['paula/**', 'paula_cloud/**', 'tests/test_paula_cloud.py', 'tests/test_paula_receipt.py', 'tests/test_paula_domain.py', 'tests/test_paula_kling.py', 'tests/test_paula_shotkit.py', 'deploy/portal/**', 'deploy/aws/**', '.env.paula.example', 'tests/test_paula_dual.py', 'deploy/**', '.github/workflows/paula-cloud.yml']
 jobs:
   receipt-to-mp4:
     runs-on: ubuntu-latest
@@ -13,5 +13,6 @@ jobs:
         with: {python-version: '3.12'}
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
       - run: python -m pip install -r paula_cloud/requirements.txt pytest httpx
-      - run: python -m pytest -q tests/test_paula_cloud.py tests/test_paula_receipt.py tests/test_paula_dual.py
+      - run: python -m pytest -q tests/test_paula_cloud.py tests/test_paula_receipt.py tests/test_paula_dual.py tests/test_paula_domain.py tests/test_paula_kling.py tests/test_paula_shotkit.py
+      - run: node --check deploy/portal/make/app.js
       - run: bash -n deploy/*.sh

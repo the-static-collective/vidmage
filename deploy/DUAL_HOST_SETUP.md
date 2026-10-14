@@ -1,4 +1,6 @@
-# Paula Vidmage — TWO-MACHINE installation (Home + AWS)
+# Paula Vidmage — ph.abundent.org (Home + AWS)
+
+**Permanent entrance:** `https://ph.abundent.org` (Cloudflare Pages static portal); Home: `https://ph-home.abundent.org`; AWS: `https://ph-aws.abundent.org`. Portal does not proxy, persist or sync projects. For exact migration and Access steps, see `deploy/portal/README.md`.
 
 ## State and boundaries
 
@@ -7,7 +9,7 @@
 ```text
                                 Paula's iPhone (Safari)
                               ↙                      ↘
-           paula-home.example.com                 paula-aws.example.com
+           ph-home.abundent.org                 ph-aws.abundent.org
            Cloudflare Access                      Cloudflare Access
            Cloudflare Tunnel HOME                 Cloudflare Tunnel AWS
            your Linux PC                          Ubuntu 24.04 EC2
@@ -29,11 +31,11 @@
 ## Home computer
 
 1. Install Ubuntu 24.04 LTS (or compatible Ubuntu machine). Keep it powered on and updated.
-2. Clone repo and checkout branch `feature/paula-dual-host-016`.
+2. Clone repo and checkout branch `feature/paula-domain-017-ph-abundent`.
 3. `bash deploy/install_docker_ubuntu.sh` (installs Docker/Compose from official Docker apt repository).
-4. `cp .env.paula.example .env.paula && chmod 600 .env.paula`. Edit `PAULA_NODE_LABEL=Home studio`, set **real** Cloudflare Access team domain, audience tag, and allowed email(s); both `PAULA_HOME_URL=https://paula-home.YOURDOMAIN` and `PAULA_AWS_URL=https://paula-aws.YOURDOMAIN`.
+4. `cp .env.paula.example .env.paula && chmod 600 .env.paula`. Edit `PAULA_NODE_LABEL=Home studio`, set **real** Cloudflare Access team domain, audience tag, and allowed email(s); both `PAULA_HOME_URL=https://ph-home.abundent.org` and `PAULA_AWS_URL=https://ph-aws.abundent.org`.
 5. `bash deploy/start_node.sh`. Container runs at `127.0.0.1:8768` only; backend *refuses* unsigned Access tokens.
-6. In Cloudflare dashboard create a private web application for `paula-home.YOURDOMAIN`, allow only Paula/you, and a separately named tunnel `paula-home`. Route public hostname to `http://127.0.0.1:8768` and install `cloudflared` as a local service **using the dashboard's command**. Set **Protect with Access** in Tunnel settings where available so the origin is additionally protected by JWT validation. No router port forwarding.
+6. In Cloudflare dashboard create a private web application for `ph-home.abundent.org`, allow only Paula/you, and a separately named tunnel `paula-home`. Route public hostname to `http://127.0.0.1:8768` and install `cloudflared` as a local service **using the dashboard's command**. Set **Protect with Access** in Tunnel settings where available so the origin is additionally protected by JWT validation. No router port forwarding.
 7. Test from Paula's iPhone on mobile data. Log in with her email OTP, create a synthetic story and render a small MP4. Confirm unlisted email is blocked.
 
 ## AWS computer
@@ -42,7 +44,7 @@
 2. AWS Console → CloudFormation → Create stack → Upload `deploy/aws/paula-ec2.yaml`, specify correct `VpcId` and **public subnet** with Internet Gateway route, choose a machine size and 40 GiB gp3 encrypted disk by default. Review IAM permissions. This creates an Ubuntu EC2 host with **zero security-group ingress rules**; Session Manager is provided through the `AmazonSSMManagedInstanceCore` IAM instance profile. An outbound public IPv4 address may have separate charges.
 3. Wait for EC2 to boot. AWS Systems Manager → Session Manager → Start session for instance ID from stack output; change user to ubuntu (`sudo -iu ubuntu`) and enter `/opt/paula-vidmage`. If cloud-init clone/install failed, repair using the logs `/var/log/cloud-init-output.log` and rerun `deploy/install_docker_ubuntu.sh`. No SSH hole is needed.
 4. Create `.env.paula` as on Home, but `PAULA_NODE_LABEL=AWS studio`; use *the same* Access team domain and allowed email list, **the audience for the AWS Access application** (likely a different AUD), and the same two URL labels.
-5. `bash deploy/start_node.sh`. Create a **different** Cloudflare Tunnel `paula-aws`, Access application and route: `paula-aws.YOURDOMAIN` → `http://127.0.0.1:8768`. Configure local cloudflared service through the dashboard, never paste tunnel tokens into git/chat.
+5. `bash deploy/start_node.sh`. Create a **different** Cloudflare Tunnel `paula-aws`, Access application and route: `ph-aws.abundent.org` → `http://127.0.0.1:8768`. Configure local cloudflared service through the dashboard, never paste tunnel tokens into git/chat.
 6. Test `/api/health` after login and a real tiny film; verify home and AWS show different node labels on `/nodes`.
 
 ## iPhone workflow

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f9eee6"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="A private-to-your-browser shot notebook for planning Kling video clips on your phone.">
+<title>Paula's Shot Notebook · Vidmage</title>
+<style>
+:root{font:16px/1.55 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;color:#352a33;background:#fff5ed}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 95% 2%,#eac0c3,transparent 41%),linear-gradient(#fff5ee,#f7ebe7);min-height:100dvh}
+main{max-width:690px;margin:auto;padding:calc(20px + env(safe-area-inset-top)) 16px calc(45px + env(safe-area-inset-bottom))}
+h1,h2,h3{font-family:Georgia,serif;line-height:1.12;font-weight:400;letter-spacing:-.025em}h1{font-size:clamp(2.4rem,9vw,3.7rem);margin:16px 0 12px}h2{font-size:1.7rem;margin:0 0 12px}h3{font-size:1.4rem;margin:8px 0}
+p{margin:8px 0 15px}.eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.15em;font-weight:750;color:#855365}
+.card{background:#fffdfa;border:1px solid #ddc8c9;border-radius:20px;box-shadow:0 9px 26px #70405d15;padding:19px;margin:16px 0}
+label{display:block;font-weight:700;font-size:.87rem;margin:14px 0 5px;color:#684556}
+input,textarea,select{width:100%;border:1px solid #c8abad;background:white;color:#392e35;border-radius:10px;font:16px/1.48 system-ui,sans-serif;padding:12px}
+textarea{resize:vertical;min-height:90px}textarea.long{min-height:120px}
+button,.button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:10px 14px;border-radius:12px;border:1px solid #ad8e97;background:#f3e4e8;color:#523449;font:700 .91rem system-ui,sans-serif;cursor:pointer;text-decoration:none;text-align:center}
+button.primary,.button.primary{background:#713d59;color:#fff;border-color:#713d59}
+button:focus-visible,.button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #b77a3c;outline-offset:2px}
+button:disabled{opacity:.45}.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:13px 0}
+.note{background:#fff4df;border-left:4px solid #b99065;padding:12px;border-radius:7px;font-size:.91rem}
+.muted,small{color:#71606a;font-size:.83rem}.shot{border:1px solid #e1cdd1;background:#fff8f7;border-radius:16px;padding:16px;margin:14px 0}
+.shot-head{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}.shot-number{font-size:.77rem;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:#82556b}
+.duration{max-width:140px}.checkbox{display:inline-flex;gap:8px;align-items:center;font-weight:600;font-size:.87rem}.checkbox input{width:18px;height:18px}
+#notice{position:sticky;bottom:12px;border-radius:12px;padding:10px 13px;background:#e4f1e5;color:#24513b;font-weight:700;box-shadow:0 5px 18px #0002}#notice[hidden]{display:none}
+footer{font-size:.77rem;color:#74606a;margin:26px 2px}.hidden{display:none!important}
+@media(min-width:520px){.cols{display:grid;grid-template-columns:1fr 1fr;gap:13px}.cols label{margin-top:4px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style></head>
+<body><main>
+<a href="/" class="button" aria-label="Back to Paula's movie front door">← Paula's front door</a>
+<div class="eyebrow" style="margin-top:23px">Vidmage · Free creator desk</div>
+<h1>One scene at a time.</h1>
+<p>Turn a story into clear Kling prompts, keep track of each clip, and carry the plan into your movie studio when it comes online.</p>
+<div class="note">This notebook runs in your browser. Nothing you type is sent to Vidmage, Kling, or Cloudflare servers by this page. Kling runs separately in your own account. <strong>Download a backup</strong> before clearing Safari data or changing devices.</div>
+<section class="card" aria-labelledby="planHeading">
+<h2 id="planHeading">The movie in your head</h2>
+<label for="title">Movie title</label><input id="title" maxlength="120" autocomplete="off" placeholder="A golden autumn morning">
+<label for="story">What's the story?</label><textarea id="story" maxlength="5000" class="long" placeholder="A few sentences are plenty…"></textarea>
+<label for="characters">Keep the same people and places</label><textarea id="characters" maxlength="1800" placeholder="Hair, clothes, home, props, setting, first-frame reference…"></textarea>
+<div class="cols"><div><label for="mood">Feeling</label><select id="mood"><option>Gentle family</option><option>Christian romance</option><option>Joyful storybook</option><option>Quiet and hopeful</option><option>Other cinematic</option></select></div>
+<div><label for="ratio">Film shape</label><select id="ratio"><option value="9:16">Vertical · phone</option><option value="16:9">Wide · cinema</option><option value="1:1">Square · post</option></select></div></div>
+</section>
+<section class="card" aria-labelledby="shotHeading">
+<div class="shot-head"><h2 id="shotHeading">The shots</h2><span id="count" class="muted"></span></div>
+<p class="muted">Make one Kling clip per scene. Copy the prompt, then open Kling in a new tab; paste it there. Your choices and account stay yours.</p>
+<div id="shots" aria-live="off"></div>
+<div class="row"><button type="button" id="add" class="primary">+ Add a scene</button><span id="total" class="muted"></span></div>
+<div class="note">The private Vidmage computer can later join up to 12 downloaded MP4 clips, at most 90 seconds total. Each imported MP4 must be 1–30 seconds and no larger than 75 MB. A copied Kling prompt does not create or purchase a video.</div>
+</section>
+<section class="card">
+<h2>Take your story with you</h2>
+<div class="row">
+<button id="save" class="primary" type="button">Save a shot-kit backup</button>
+<button id="copyAll" type="button">Copy all Kling prompts</button>
+<button id="import" type="button">Restore a shot-kit backup</button>
+</div>
+<div class="row"><button id="exportPocket" type="button">Export for Vidmage story editor</button>
+<a class="button" href="https://kling.ai/" target="_blank" rel="noopener noreferrer">Open Kling ↗</a></div>
+<input id="importFile" class="hidden" type="file" accept=".json,application/json">
+<p class="muted">The Vidmage export is an unapproved storyboard; review and approve it inside the future private studio before rendering. Restoring replaces this notebook on this browser.</p>
+</section>
+<div id="notice" role="status" hidden></div>
+<footer>No Kling credentials, API tokens, uploaded media or automatic payment. This page is available on the public Pages preview too; its contents remain local to the browser you use. Local browser storage can be cleared at any time.</footer>
+</main>
+<script src="/make/app.js" defer></script>
+</body></html>
