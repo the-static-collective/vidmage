@@ -2,7 +2,18 @@
 
 **SSL note:** the first-level domains `ph-home.abundent.org` and `ph-aws.abundent.org` replace the earlier two-level `home.ph.abundent.org` and `aws.ph.abundent.org`. Cloudflare Universal SSL covers first-level names without requiring paid Advanced Certificate Manager. Do not set up the old names.
 
-Status: source prepared, **NOT LIVE** until Cloudflare, DNS, and at least one node are configured. No account tokens or Paula's media belong in GitHub.
+**Deployment status (2026-10-13/14):** Cloudflare Pages project `paula-movie-portal` successfully deployed to `https://paula-movie-portal.pages.dev/` from this branch. Custom domain `ph.abundent.org` is attached and DNS-proxied. Cloudflare Zero Trust Access application `Paula Movie Portal` is saved for the exact hostname with owner-only email OTP allow policy; unauthenticated fetch of `ph.abundent.org` returned `login_required`. Pages project host `pages.dev` remains public and shows only the static link chooser (no private project data). **Home and AWS engines are NOT yet provisioned**; phone workflow with real media is NOT verified. No account tokens or Paula's media belong in GitHub.
+
+
+## Cloudflare deployment receipt — 2026-10-13/14
+
+- TinyFish authenticated Cloudflare browser run created project `paula-movie-portal`, with GitHub source `the-static-collective/vidmage`, branch `feature/paula-domain-017-ph-abundent`, Pages output `deploy/portal`, no build command, on the free tier. Initial build succeeded.
+- Public static Pages project URL: `https://paula-movie-portal.pages.dev/`. It contains only three outbound links, no account data or media; do **not** mistake this public alias for private access.
+- Created Cloudflare Zero Trust Access self-hosted application named `Paula Movie Portal` for `ph.abundent.org`. Policy `Owner Only - One Time PIN` permits only the Cloudflare owner's email, with one-time PIN. Other addresses, **including Paula**, will be denied until explicitly added. Keep member emails inside Access, not in source control.
+- Added custom domain `ph.abundent.org` to Pages. Cloudflare DNS now has proxied CNAME `ph.abundent.org` → `paula-movie-portal.pages.dev` while all six migrated records remain unchanged.
+- Anonymous external fetch: `https://paula-movie-portal.pages.dev/` returned the exact deployed public portal; anonymous fetch of `https://ph.abundent.org/` returned `login_required`, consistent with Access enforcement. **Owner's authenticated iPhone Safari experience not yet tested.**
+- `ph-home.abundent.org` and `ph-aws.abundent.org` currently have no configured private origin, backend or Access applications. Do not point to the wildcard parking origin in place of these. AWS spend requires a later explicit owner approval.
+- Custom domain initialization was still pending when configured; its live Access refusal is not proof that the underlying Pages custom-host routing is fully ready after owner login. Recheck before calling it fully operational.
 
 ## The fixed addresses
 
